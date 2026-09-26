@@ -7,7 +7,11 @@ authors = [
     { name = "YuriASN", email = "yuriasn@hotmail.com" }
 ]
 requires-python = ">=3.10"
-dependencies = []
+dependencies = [
+    "colorama>=0.4.6",
+    "pydantic>=2.13.5",
+    "typing>=3.10.0.0",
+]
 
 [project.scripts]
 fly-in = "fly_in:main"
