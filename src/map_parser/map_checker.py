@@ -61,7 +61,7 @@ class Hub(BaseModel):
 
 class Connection(BaseModel):
     names: List[str] = Field(
-        ..., description="Names of both hubs")
+        ..., min_length=2, max_length=2, description="Names of both hubs")
     hubs: Tuple[Hub, Hub] = Field(
         ..., description="Tuple with the 2 hubs connected")
     max_drones: int = Field(
@@ -94,7 +94,7 @@ class Map(BaseModel):
     end_hub: Hub = Field(..., description="Goal hub for the drones")
     hubs: List[Hub] = Field(..., description="All the other hubs on the map")
     connections: List[Connection] = Field(
-        ..., description="All the connections on the map")
+        ..., min_length=1, description="All the connections on the map")
     turn: int = Field(default=0, description="Current turn")
 
     @model_validator(mode="after")

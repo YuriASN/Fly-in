@@ -10,6 +10,7 @@ requires-python = ">=3.10"
 dependencies = [
     "colorama>=0.4.6",
     "pydantic>=2.13.5",
+    "types-colorama>=0.4.15.20260508",
     "typing>=3.10.0.0",
 ]
 
