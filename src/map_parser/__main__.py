@@ -1,4 +1,4 @@
-#! .venv/bin/python3.10
+#! .venv/bin python3.10
 
 from .get_map import get_maps
 

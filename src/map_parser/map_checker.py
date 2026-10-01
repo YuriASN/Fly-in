@@ -40,7 +40,7 @@ class Hub(BaseModel):
     drones_in: List[Drone] = Field(
         default=[], description="Current drones on the hub")
     links: List["Connection"] = Field(
-        default=[], description="The connections this Hub has")
+        default=[], description="The connections this Hub has outgoing")
 
     @model_validator(mode="after")
     def validade_hub(self) -> "Hub":
@@ -71,9 +71,8 @@ class Connection(BaseModel):
 
     @model_validator(mode="after")
     def conn_validate(self) -> "Connection":
-        # Add connection to both hubs
+        # Add connection to outgoing hub
         self.hubs[0].links.append(self)
-        self.hubs[1].links.append(self)
 
         # Validate if connection is duplicated
         hub1_links = [id(link) for link in self.hubs[0]]
