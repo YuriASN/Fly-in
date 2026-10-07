@@ -10,7 +10,7 @@ C_CLEAR = Style.RESET_ALL
 
 
 class Path(BaseModel):
-    path: List[Connection] = Field(...,
+    links: List[Connection] = Field(...,
                                    description="List of valid connections "
                                    "connecting start_hub to end_hub")
     turns: int = Field(
@@ -48,12 +48,14 @@ def get_path(hub: Hub, end: str, all_paths: List[Path],
                 moving = min(link.max_drones, next_hub.max_drones)
             else:
                 moving = min([link.max_drones, next_hub.max_drones, moving])
+            if moving == 0:
+                return all_paths
             conns.append(link)
             turns += 1
 
             if next_hub.name == end:
                 all_paths.append(
-                    Path(path=conns, turns=turns,
+                    Path(links=conns, turns=turns,
                          moving=moving, priority=priority))
                 conns.pop()
                 return all_paths

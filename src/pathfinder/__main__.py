@@ -1,8 +1,11 @@
 #! .venv/bin python3.10
 
 from .path_finder import get_path, Path
+from .path_organizer import order_paths
 from ..map_parser import get_maps, Map
 from typing import List, TypedDict
+from colorama import Fore, Style
+import traceback
 
 
 class MapData(TypedDict):
@@ -19,16 +22,21 @@ def print_hub_links(all_maps: List[Map]) -> None:
     # exit()
 
 
+def print_paths(paths: List[Path]) -> None:
+    for each in paths:
+        hub_list = each.links[0].names[0]
+        for conn in each.links:
+            hub_list += " -> " + conn.names[1]
+        print(f"\t({len(each.links)} - {each.priority} - "
+              f"{each.moving / each.turns:.3}) {hub_list}")
+
+
 def print_maps_paths(all_data: List[MapData]) -> None:
+
     # Print map name and all it's paths
     for map in all_data:
-        print(f"Map {map['map'].name} has paths:")
-        for path in map["all_paths"]:
-            hub_list = path.path[0].names[0]
-            for conn in path.path:
-                hub_list += " -> " + conn.names[1]
-            print(f"\t{hub_list}")
-            print()
+        print(f"Map {map['map'].name} has paths:\n\t", end="")
+        print_paths(map["all_paths"])
 
 
 if __name__ == "__main__":
@@ -49,10 +57,18 @@ if __name__ == "__main__":
                  "all_paths": paths
                  }
             )
-
+        print("All paths loaded")
         # print_maps_paths(all_data)
+        for each in all_data:
+            print(f"\n{Fore.GREEN}Map '{each['map'].name}':\n"
+                  f"Normal:{Style.RESET_ALL}")
+            print_paths(each["all_paths"])
+            each["all_paths"] = order_paths(each["all_paths"])
+            print(f"\n{Fore.GREEN}Ordered:{Style.RESET_ALL}\n")
+            print_paths(each["all_paths"])
+            print("-" * 50)
 
     except KeyboardInterrupt as interr:
-        raise interr
+        print(f"{interr}\n\n{traceback.format_exc()}")
     except BaseException as err:
-        print(err)
+        print(f"{err}\n\n{traceback.format_exc()}")
