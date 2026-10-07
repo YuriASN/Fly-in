@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, model_validator, ValidationError
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict
 from colorama import Style, Fore
 from collections import Counter
 from pathlib import Path
@@ -71,9 +71,6 @@ class Connection(BaseModel):
 
     @model_validator(mode="after")
     def conn_validate(self) -> "Connection":
-        # Add connection to outgoing hub
-        self.hubs[0].links.append(self)
-
         # Validate if connection is duplicated
         hub1_links = [id(link) for link in self.hubs[0]]
         hub2_links = [id(link) for link in self.hubs[1]]
@@ -84,6 +81,10 @@ class Connection(BaseModel):
                             f"'{self.hubs[0].name}' and '{self.hubs[1].name}'")
 
         return self
+
+    def add_to_hub(self) -> None:
+        # Add connection to outgoing hub
+        self.hubs[0].links.append(self)
 
 
 class Map(BaseModel):
@@ -167,8 +168,8 @@ def map_creator(map_file: Path) -> Map:
             if points[0] == points[1]:
                 raise ValueError("Connection is in and out of the same hub "
                                  f"'{points[0]}'")
-            objects = [*hubs, start, end]
-            objects_by_name = {obj.name: obj for obj in objects}
+            objects_by_name: Dict[str, Hub] = {
+                obj.name: obj for obj in [*hubs, start, end]}
             hub1 = objects_by_name.get(points[0])
             hub2 = objects_by_name.get(points[1])
             if not hub1:
@@ -177,6 +178,7 @@ def map_creator(map_file: Path) -> Map:
                 raise ValueError(f"hub '{points[1]}' doesn't exist.")
             conn = Connection(names=value.split("-"),
                               hubs=(hub1, hub2), max_drones=max_drones)
+            conn.add_to_hub()
 
         except (ValidationError, DuplicatedError) as err:
             raise Exception(f"Error validating hub: {err}")
@@ -193,7 +195,7 @@ def map_creator(map_file: Path) -> Map:
                 line = file.readline()
                 if not line:
                     break
-                if line.startswith("#") or line.isspace():
+                if line.strip().startswith("#") or line.isspace():
                     continue
                 key, value = line.split(":")
                 if key == "hub":
