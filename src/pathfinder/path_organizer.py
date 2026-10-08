@@ -38,7 +38,9 @@ def remove_double(paths: List[Path]) -> List[Path]:
 
 def order_paths(paths: List[Path]) -> List[Path]:
     """
-    Orders the list of Path accordingly to priority and less turns to get more drones in the end. Removing paths the double use a hub. Returns the ordered list.
+    Orders the list of Path accordingly to priority and less turns to get more
+    drones in the end. Removing paths the double use a hub.
+    Returns the ordered list.
     """
     try:
         df = pd.DataFrame({
@@ -54,7 +56,7 @@ def order_paths(paths: List[Path]) -> List[Path]:
             for row in df["path"]
         ]
 
-        #sorted_list = remove_double(sorted_list)
+        # sorted_list = remove_double(sorted_list) # Implement here or outside
     except Exception as err:
         raise Exception(f"{C_RED}Ordering paths: {err}{C_CLEAR}\n"
                         f"{traceback.format_exc()}") from err

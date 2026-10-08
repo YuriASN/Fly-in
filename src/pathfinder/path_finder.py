@@ -10,9 +10,9 @@ C_CLEAR = Style.RESET_ALL
 
 
 class Path(BaseModel):
-    links: List[Connection] = Field(...,
-                                   description="List of valid connections "
-                                   "connecting start_hub to end_hub")
+    links: List[Connection] = Field(
+        ..., description="List of valid connections "
+        "connecting start_hub to end_hub")
     turns: int = Field(
         ..., description="Total amount of turns a drone need to go through "
         "this path")
