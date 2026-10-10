@@ -22,10 +22,11 @@ def remove_double(paths: List[Path]) -> List[Path]:
         remove = False
         for link in paths[i - removed].links:
             if link.names[1] in passed_names:
+                #Check if can boost the amount of drones passing on this link and next ones ???
                 remove = True
                 break
             if len(link.hubs[1].links):
-                # Add the hub to the list if it isn't the last hub
+                # Adds the hub to the list if it isn't the last hub
                 passed_names.append(link.names[1])
         if remove:
             paths.pop(i - removed)

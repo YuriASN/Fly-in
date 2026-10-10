@@ -13,6 +13,17 @@ class MapData(TypedDict):
     all_paths: List[Path]
 
 
+def print_hubs_xy(maps: List[Map]) -> None:
+    for map in maps:
+        print(f"Map: {map.name}")
+        print(f"{map.start_hub}: x={map.start_hub.x} y={map.start_hub.y}")
+        print(f"{map.end_hub}: x={map.end_hub.x} y={map.end_hub.y}")
+        for hub in map.hubs:
+            print(f"{hub.name}: x={hub.x} y={hub.y}")
+        print()
+    print("\n")
+
+
 def print_hub_links(all_maps: List[Map]) -> None:
     for each in all_maps:
         print(f"In map {each.name}:")
@@ -45,6 +56,7 @@ if __name__ == "__main__":
         all_maps = get_maps("maps")
         # print_hub_links(all_maps)
         print("Maps loaded")
+        # print_hubs_xy(all_maps)
         # Get Paths for each map
         for each in all_maps:
             print(f"Getting paths from: '{each.name}'")
