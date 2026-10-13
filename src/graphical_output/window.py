@@ -39,7 +39,7 @@ class Application(tk.Tk):
     def __init__(self, levels: List[Level]) -> None:
         try:
             self.screen_x, self.screen_y = get_curr_screen_size()
-            tk.Tk.__init__(self)
+            tk.Tk.__init__(self, className="Fly-In")
             self.configure(
                 width=int(self.screen_x * 0.8),
                 height=int(self.screen_y * 0.8),
@@ -49,15 +49,42 @@ class Application(tk.Tk):
             raise Exception(f"{C_RED}Initializing tkinter: {err}"
                             f"{C_CLEAR}\n\n{traceback.format_exc()}")
 
+        self.current_map: tk.Frame | None = None
         self.get_levels_grid(levels)
         self.menu_widget()
         self.home_loader()
         self.grid()
 
+    def clear_grid(self) -> None:
+        grids = self.grid_slaves(row=1)
+        for grid in grids:
+            grid.grid_forget()
 
     def map_put(self, map: Map) -> None:
+        def color_check(root: tk.Tk, color: str) -> bool:
+            try:
+                self.winfo_rgb(color)
+                return True
+            except tk.TclError:
+                return False
+            
         try:
-            print(f"putting map {map.name}")
+            self.clear_grid()
+            full_grid = tk.LabelFrame(self, text=map.name, labelanchor="nw",
+                                      padx=6, pady=6)
+            for hub in [*map.hubs, map.start_hub, map.end_hub]:
+                letter = "black"
+                if hub.color == "black":
+                    letter = "white"
+                if color_check(self, hub.color):
+                    hub_tk = tk.Label(full_grid, text=hub.name,
+                                      bg=hub.color, fg=letter)
+                else:
+                    hub_tk = tk.Label(full_grid, text=hub.name,
+                                      bg="white", fg=letter)
+                hub_tk.grid(column=hub.x, row=hub.y, padx=2, pady=2)
+            full_grid.grid()
+            
 
         except Exception as err:
             raise Exception(f"{C_RED}While putting map '{map.name}': {err}"
@@ -90,8 +117,11 @@ class Application(tk.Tk):
     def home_loader(self) -> None:
         "Goes to the map choosing screen"
         try:
-            print("home loader")#
-            #clear the grid
+            self.clear_grid()
+            if self.current_map:
+                self.current_map.grid_forget()
+                self.current_map.destroy()
+                self.current_map == None
             for i, each in enumerate(self.levels):
                 each["frame"].grid(row=1, column=i)
                 for j, buttom in enumerate(each["maps"]):
@@ -115,11 +145,11 @@ class Application(tk.Tk):
             self.menu.home_buttom.grid(row=0, column=0)
 
         try:
-            self.menu = tk.LabelFrame(self, labelanchor="sw", text="Menu",
+            self.menu = tk.LabelFrame(self, labelanchor="nw", text="Menu",
                                       padx=6, pady=6)
             quit_widget(self)
             home_widget(self)
-            self.menu.grid(row=0, column=0)
+            self.menu.grid(row=0, column=0, sticky="NW")
 
         except Exception as err:
             raise Exception(f"{C_RED}Creating menu: {err}"
