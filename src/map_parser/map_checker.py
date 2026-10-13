@@ -17,6 +17,11 @@ class DuplicatedError(BaseException):
     pass
 
 
+class Coordinates(BaseModel):
+    x: int = 0
+    y: int = 0
+
+
 class Drone(BaseModel):
     move_turn: int = Field(
         default=0, description="The turn when it can leave the connection")
@@ -96,6 +101,8 @@ class Map(BaseModel):
     connections: List[Connection] = Field(
         ..., min_length=1, description="All the connections on the map")
     turn: int = Field(default=0, description="Current turn")
+    grid_size: Coordinates = Field(default_factory=Coordinates,
+                                   description="Size of the grid")
 
     @model_validator(mode="after")
     def validate_map(self) -> "Map":
