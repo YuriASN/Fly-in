@@ -1,4 +1,4 @@
-from .get_map import get_maps
+from .get_map import get_maps, Level
 from .map_checker import Drone, Hub, Connection, Map
 
 __all__ = [
@@ -6,7 +6,8 @@ __all__ = [
     "Drone",
     "Hub",
     "Connection",
-    "Map"
+    "Map",
+    "Level"
 ]
 
 

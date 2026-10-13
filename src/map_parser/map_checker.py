@@ -88,7 +88,7 @@ class Connection(BaseModel):
 
 
 class Map(BaseModel):
-    level: Optional[str] = Field(..., description="Level of the map")
+    level: str = Field(..., description="Level of the map")
     name: str = Field(..., description="Name of the map")
     start_hub: Hub = Field(..., description="Hub where all the drones start")
     end_hub: Hub = Field(..., description="Goal hub for the drones")
@@ -101,7 +101,7 @@ class Map(BaseModel):
     def validate_map(self) -> "Map":
         # Validate the level
         if self.level == "maps":
-            self.level = None
+            self.level = ""
         # Validate Hub duplicated names
         duplicates = [
             name
