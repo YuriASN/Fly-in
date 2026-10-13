@@ -30,11 +30,11 @@ def fix_coordinates(maps: List[Map]) -> None:
         for map in maps:
             x = min(map.start_hub.x, map.end_hub.x)
             y = min(map.start_hub.y, map.end_hub.y)
-            for hub in map.hubs:
+            for hub in [*map.hubs, map.start_hub, map.end_hub]:
                 x = min(hub.x, x)
                 y = min(hub.y, y)
             if x != 0 or y != 0:
-                for hub in map.hubs:
+                for hub in [*map.hubs, map.start_hub, map.end_hub]:
                     hub.x = hub.x + (x * -1)
                     hub.y = hub.y + (y * -1)
 
