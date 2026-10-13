@@ -34,12 +34,14 @@ def fix_coordinates(maps: List[Map]) -> None:
             for hub in [*map.hubs, map.start_hub, map.end_hub]:
                 x = min(hub.x, x)
                 y = min(hub.y, y)
-            if x != 0 or y != 0:
+                max_x = max(hub.x, max_x)
+                max_y = max(hub.y, max_y)
+            if x or y:
                 for hub in [*map.hubs, map.start_hub, map.end_hub]:
                     hub.x = hub.x + (x * -1)
                     hub.y = hub.y + (y * -1)
-                    max_x = max(hub.x, max_x)
-                    max_y = max(hub.y, max_y)
+                max_x = max_x + (x * -1)
+                max_y = max_y + (y * -1)
             map.grid_size.x = max_x + 1
             map.grid_size.y = max_y + 1
 

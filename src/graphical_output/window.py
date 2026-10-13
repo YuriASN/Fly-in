@@ -67,23 +67,36 @@ class Application(tk.Tk):
                 return True
             except tk.TclError:
                 return False
-            
+
+        def put_hub(canvas: tk.Canvas, color: str, letter: str,
+                    x: int, y: int, name: str) -> None:
+            canvas.create_oval(x + 40, y + 20, x + 120, y + 60,
+                               fill=color, outline="black", width=2)
+            canvas.create_text(x + 80, y + 40, text=name, fill=letter,
+                               font=("Arial", 10))
+
         try:
             self.clear_grid()
-            full_grid = tk.LabelFrame(self, text=map.name, labelanchor="nw",
-                                      padx=6, pady=6)
+            """ full_grid = tk.LabelFrame(self, text=map.name, labelanchor="nw",
+                                      padx=6, pady=6) """
+            map_root = tk.LabelFrame(self, text=map.name, labelanchor="nw",
+                                     font=("Arial", 10))
+            hub_tk = tk.Canvas(map_root,
+                               width=map.grid_size.x * 160,
+                               height=map.grid_size.y * 80)
             for hub in [*map.hubs, map.start_hub, map.end_hub]:
                 letter = "black"
-                if hub.color == "black":
+                color = hub.color
+                if color == "black":
                     letter = "white"
-                if color_check(self, hub.color):
-                    hub_tk = tk.Label(full_grid, text=hub.name,
-                                      bg=hub.color, fg=letter)
-                else:
-                    hub_tk = tk.Label(full_grid, text=hub.name,
-                                      bg="white", fg=letter)
-                hub_tk.grid(column=hub.x, row=hub.y, padx=2, pady=2)
-            full_grid.grid()
+                if not color_check(self, color):
+                    color = "white"
+                put_hub(hub_tk, color, letter,
+                        hub.x * 160, hub.y * 80, hub.name)
+            hub_tk.grid()
+            map_root.grid(row=1, column=0, padx=4, pady=4, sticky="nw")
+            self.update_idletasks()
+            self.geometry("")
             
 
         except Exception as err:
@@ -117,11 +130,11 @@ class Application(tk.Tk):
     def home_loader(self) -> None:
         "Goes to the map choosing screen"
         try:
-            self.clear_grid()
             if self.current_map:
                 self.current_map.grid_forget()
                 self.current_map.destroy()
                 self.current_map == None
+            self.clear_grid()
             for i, each in enumerate(self.levels):
                 each["frame"].grid(row=1, column=i)
                 for j, buttom in enumerate(each["maps"]):
@@ -135,18 +148,20 @@ class Application(tk.Tk):
         def quit_widget(self) -> None:
             self.menu.quit_button = tk.Button(self.menu, text="Quit",
                                               padx=6, pady=6,
+                                              font=("Arial", 10),
                                               command=self.quit)
             self.menu.quit_button.grid(row=0, column=1)
 
         def home_widget(self) -> None:
             self.menu.home_buttom = tk.Button(self.menu, text="Home",
                                               padx=6, pady=6,
+                                              font=("Arial", 10),
                                               command=self.home_loader)
             self.menu.home_buttom.grid(row=0, column=0)
 
         try:
             self.menu = tk.LabelFrame(self, labelanchor="nw", text="Menu",
-                                      padx=6, pady=6)
+                                      padx=6, pady=6, font=("Arial", 10))
             quit_widget(self)
             home_widget(self)
             self.menu.grid(row=0, column=0, sticky="NW")
