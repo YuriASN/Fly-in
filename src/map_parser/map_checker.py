@@ -214,8 +214,8 @@ def map_creator(map_file: Path) -> Map:
                             "Variable 'nb_drones' is duplicated!")
                     for _ in range(int(value)):
                         drones.append(Drone())
-        name = map_file.name[name.find("_") + 1:name.rfind(".")]
-        name = name.replace("_", " ").title()
+        name = map_file.name[map_file.name.find("_") + 1]
+        name = name[:name.rfind(".")].replace("_", " ").title()
         map = Map(name=name, level=map_file.parent.name,
                   start_hub=start_hub, end_hub=end_hub,
                   hubs=hubs, connections=connections)
