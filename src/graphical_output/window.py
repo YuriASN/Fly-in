@@ -1,6 +1,6 @@
 import tkinter as tk
 from typing import Tuple, List, Dict, TypedDict
-from map_parser import Level, Map
+from map_parser import Level, Map, Connection
 from colorama import Fore, Style
 from functools import partial
 import traceback
@@ -61,7 +61,8 @@ class Application(tk.Tk):
             grid.grid_forget()
 
     def map_put(self, map: Map) -> None:
-        CELL_W, CELL_H = 160, 80
+        CELL_W, CELL_H, MARGIN = 160, 80, 40
+        HUB_W, HUB_H = CELL_W // 2, CELL_H // 2
 
         def color_check(color: str) -> bool:
             try:
@@ -70,18 +71,42 @@ class Application(tk.Tk):
             except tk.TclError:
                 return False
 
-        def put_hub(canvas, color, letter, x, y, name):
-            canvas.create_oval(x + 40, y + 20, x + 120, y + 60,
-                            fill=color, outline="black", width=2)
-            canvas.create_text(x + 80, y + 40, text=name, fill=letter,
-                            font=("Arial", 10))
+        def put_hub(canvas: tk.Canvas, color: str, letter: str,
+                    x: int, y: int, name: str) -> None:
+            """
+            Places a hub on the canvas using x and y pixel coordinates.
+            """
+            x += CELL_W // 2
+            y += CELL_H // 2
+            canvas.create_oval(x, y, x + HUB_W, y + HUB_H,
+                               fill=color, outline="black", width=2)
+            canvas.create_text(x + HUB_W // 2, y + HUB_H // 2,
+                               text=name, fill=letter, font=("Arial", 10))
+
+        def put_conn(canvas: tk.Canvas, conn: Connection) -> None:
+            """
+            Places the conn inside the canvas using it's hubs to figure out
+            the coordinates.
+            """
+            x1 = conn.hubs[0].x * (CELL_W * 2) + MARGIN + CELL_W + 20
+            y1 = conn.hubs[0].y * (CELL_H * 2) + MARGIN + (CELL_W // 4) + 20
+            x2 = conn.hubs[1].x * (CELL_W * 2) + MARGIN
+            y2 = conn.hubs[1].y * (CELL_H * 2) + MARGIN
+            x_diff = y_diff = 1
+            if x1 > x2:
+                x_diff = -1
+            if y1 > y2:
+                y_diff = -1
+            canvas.create_line(x1, y1, x2, y2)
+
+            pass#
 
         try:
             self.clear_grid()
             map_root = tk.LabelFrame(self, text=map.name, labelanchor="nw",
                                     font=("Arial", 10))
-            full_w = map.grid_size.x * CELL_W
-            full_h = map.grid_size.y * CELL_H
+            full_w = map.grid_size.x * CELL_W + MARGIN * 2
+            full_h = map.grid_size.y * CELL_H + MARGIN * 2
             # Cap the *visible* size to a portion of the screen
             max_w = int(self.winfo_screenwidth() * 0.9)
             max_h = int(self.winfo_screenheight() * 0.8)
@@ -95,7 +120,11 @@ class Application(tk.Tk):
                 letter = "white" if hub.color == "black" else "black"
                 color = hub.color if color_check(hub.color) else "white"
                 put_hub(hub_canvas, color, letter,
-                        hub.x * CELL_W, hub.y * CELL_H, hub.name)
+                        hub.x * CELL_W + MARGIN, hub.y * CELL_H + MARGIN,
+                        hub.name)
+
+            for conn in map.connections:
+                put_conn(hub_canvas, conn)
 
             scroll_y = tk.Scrollbar(map_root, orient=tk.VERTICAL,
                                     command=hub_canvas.yview)
