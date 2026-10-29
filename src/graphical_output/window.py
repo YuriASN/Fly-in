@@ -61,42 +61,65 @@ class Application(tk.Tk):
             grid.grid_forget()
 
     def map_put(self, map: Map) -> None:
-        def color_check(root: tk.Tk, color: str) -> bool:
+        CELL_W, CELL_H = 160, 80
+
+        def color_check(color: str) -> bool:
             try:
                 self.winfo_rgb(color)
                 return True
             except tk.TclError:
                 return False
 
-        def put_hub(canvas: tk.Canvas, color: str, letter: str,
-                    x: int, y: int, name: str) -> None:
+        def put_hub(canvas, color, letter, x, y, name):
             canvas.create_oval(x + 40, y + 20, x + 120, y + 60,
-                               fill=color, outline="black", width=2)
+                            fill=color, outline="black", width=2)
             canvas.create_text(x + 80, y + 40, text=name, fill=letter,
-                               font=("Arial", 10))
+                            font=("Arial", 10))
 
         try:
             self.clear_grid()
-            """ full_grid = tk.LabelFrame(self, text=map.name, labelanchor="nw",
-                                      padx=6, pady=6) """
             map_root = tk.LabelFrame(self, text=map.name, labelanchor="nw",
-                                     font=("Arial", 10))
-            hub_tk = tk.Canvas(map_root,
-                               width=map.grid_size.x * 160,
-                               height=map.grid_size.y * 80)
+                                    font=("Arial", 10))
+            full_w = map.grid_size.x * CELL_W
+            full_h = map.grid_size.y * CELL_H
+            # Cap the *visible* size to a portion of the screen
+            max_w = int(self.winfo_screenwidth() * 0.9)
+            max_h = int(self.winfo_screenheight() * 0.8)
+
+            hub_canvas = tk.Canvas(map_root,
+                                   width=min(full_w, max_w),
+                                   height=min(full_h, max_h),
+                                   highlightthickness=0)
+
             for hub in [*map.hubs, map.start_hub, map.end_hub]:
-                letter = "black"
-                color = hub.color
-                if color == "black":
-                    letter = "white"
-                if not color_check(self, color):
-                    color = "white"
-                put_hub(hub_tk, color, letter,
-                        hub.x * 160, hub.y * 80, hub.name)
-            hub_tk.grid()
-            map_root.grid(row=1, column=0, padx=4, pady=4, sticky="nw")
+                letter = "white" if hub.color == "black" else "black"
+                color = hub.color if color_check(hub.color) else "white"
+                put_hub(hub_canvas, color, letter,
+                        hub.x * CELL_W, hub.y * CELL_H, hub.name)
+
+            scroll_y = tk.Scrollbar(map_root, orient=tk.VERTICAL,
+                                    command=hub_canvas.yview)
+            scroll_x = tk.Scrollbar(map_root, orient=tk.HORIZONTAL,
+                                    command=hub_canvas.xview)
+            hub_canvas.configure(xscrollcommand=scroll_x.set,
+                                 yscrollcommand=scroll_y.set)
+            hub_canvas.bind("<MouseWheel>",
+                            lambda e: hub_canvas.yview_scroll(
+                                -1 * (e.delta // 120), "units"))
+            hub_canvas.bind("<Shift-MouseWheel>",
+                            lambda e: hub_canvas.xview_scroll(
+                                -1 * (e.delta // 120), "units"))
+            x1, y1, x2, y2 = hub_canvas.bbox("all")
+            hub_canvas.configure(scrollregion=(x1, y1, x2, y2))
+
+            # Layout: canvas at (0,0), vertical bar at (0,1), horizontal bar at (1,0)
+            hub_canvas.grid(row=0, column=0, sticky="nsew", padx=4, pady=4)
+            scroll_y.grid(row=0, column=1, sticky="ns")
+            scroll_x.grid(row=1, column=0, sticky="ew")
+
+            map_root.grid(row=1, column=0, padx=4, pady=4, sticky="nsew")
+
             self.update_idletasks()
-            self.geometry("")
             
 
         except Exception as err:
