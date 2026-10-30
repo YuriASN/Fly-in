@@ -1,5 +1,5 @@
 import tkinter as tk
-from typing import Tuple, List, Dict, TypedDict
+from typing import Tuple, List, TypedDict
 from map_parser import Level, Map, Connection
 from colorama import Fore, Style
 from functools import partial
@@ -88,23 +88,42 @@ class Application(tk.Tk):
             Places the conn inside the canvas using it's hubs to figure out
             the coordinates.
             """
-            x1 = conn.hubs[0].x * (CELL_W * 2) + MARGIN + CELL_W + 20
-            y1 = conn.hubs[0].y * (CELL_H * 2) + MARGIN + (CELL_W // 4) + 20
-            x2 = conn.hubs[1].x * (CELL_W * 2) + MARGIN
-            y2 = conn.hubs[1].y * (CELL_H * 2) + MARGIN
-            x_diff = y_diff = 1
-            if x1 > x2:
-                x_diff = -1
-            if y1 > y2:
-                y_diff = -1
-            canvas.create_line(x1, y1, x2, y2)
+            # Coordinates position for the width plus space
+            x_left = HUB_W - 10  # Left of cicle
+            x_middle = int(HUB_W * 1.5)  # Middle of circle width
+            x_right = HUB_W * 2 + 10  # Right of circle
 
-            pass#
+            # Coordinates position for the height plus space
+            y_top = HUB_H - 10  # Top of circle
+            y_middle = int(HUB_H * 1.5)  # Middle of circle height
+            y_bottom = HUB_H * 2 + 10  # Bottom of circle
+
+            hub1_x, hub1_y = conn.hubs[0].x, conn.hubs[0].y
+            hub2_x, hub2_y = conn.hubs[1].x, conn.hubs[1].y
+
+            x1 = hub1_x * CELL_W + MARGIN + x_right
+            y1 = hub1_y * CELL_H + MARGIN + y_middle
+            x2 = hub2_x * CELL_W + MARGIN + x_left
+            y2 = hub2_y * CELL_H + MARGIN + y_middle
+
+            if hub1_x == hub2_x:
+                x1 = hub1_x * CELL_W + MARGIN + x_middle
+                x2 = hub2_x * CELL_W + MARGIN + x_middle
+                y1 = hub1_y * CELL_H + MARGIN + y_bottom
+                y2 = hub2_y * CELL_H + MARGIN + y_top
+                if hub1_y > hub2_y:
+                    y1 = hub1_y * CELL_H + MARGIN + y_top
+                    y2 = hub2_y * CELL_H + MARGIN + y_bottom
+            elif hub1_x > hub2_x:
+                x1 = hub1_x * CELL_W + MARGIN + x_left
+                x2 = hub2_x * CELL_W + MARGIN + x_right
+
+            canvas.create_line(x1, y1, x2, y2)
 
         try:
             self.clear_grid()
             map_root = tk.LabelFrame(self, text=map.name, labelanchor="nw",
-                                    font=("Arial", 10))
+                                     font=("Arial", 10))
             full_w = map.grid_size.x * CELL_W + MARGIN * 2
             full_h = map.grid_size.y * CELL_H + MARGIN * 2
             # Cap the *visible* size to a portion of the screen
@@ -141,7 +160,7 @@ class Application(tk.Tk):
             x1, y1, x2, y2 = hub_canvas.bbox("all")
             hub_canvas.configure(scrollregion=(x1, y1, x2, y2))
 
-            # Layout: canvas at (0,0), vertical bar at (0,1), horizontal bar at (1,0)
+            # Canvas at (0,0), vertical bar at (0,1), horizontal bar at (1,0)
             hub_canvas.grid(row=0, column=0, sticky="nsew", padx=4, pady=4)
             scroll_y.grid(row=0, column=1, sticky="ns")
             scroll_x.grid(row=1, column=0, sticky="ew")
@@ -149,7 +168,6 @@ class Application(tk.Tk):
             map_root.grid(row=1, column=0, padx=4, pady=4, sticky="nsew")
 
             self.update_idletasks()
-            
 
         except Exception as err:
             raise Exception(f"{C_RED}While putting map '{map.name}': {err}"
@@ -163,14 +181,14 @@ class Application(tk.Tk):
             self.levels: List[LevelData] = []
             for level in levels:
                 new_lf = tk.LabelFrame(self, labelanchor="nw", text=level.name,
-                                    padx=6, pady=6)
+                                       padx=6, pady=6)
                 maps_buttoms: List[tk.Button] = []
                 for map in level.maps:
                     maps_buttoms.append(
                         tk.Button(new_lf, text=map.name, padx=6, pady=6,
-                                command=partial(self.map_put, map)
-                                )
-                                )
+                                  command=partial(self.map_put, map)
+                                  )
+                                  )
                 self.levels.append({
                     "frame": new_lf,
                     "maps": maps_buttoms
@@ -185,7 +203,7 @@ class Application(tk.Tk):
             if self.current_map:
                 self.current_map.grid_forget()
                 self.current_map.destroy()
-                self.current_map == None
+                self.current_map = None
             self.clear_grid()
             for i, each in enumerate(self.levels):
                 each["frame"].grid(row=1, column=i)
