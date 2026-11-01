@@ -61,8 +61,9 @@ class Application(tk.Tk):
             grid.grid_forget()
 
     def map_put(self, map: Map) -> None:
-        CELL_W, CELL_H, MARGIN = 160, 80, 40
-        HUB_W, HUB_H = CELL_W // 2, CELL_H // 2
+        CELL_W, CELL_H, MARGIN = 240, 120, 60
+        HUB_RELATION = 1.7
+        HUB_W, HUB_H = int(CELL_W // HUB_RELATION), int(CELL_H // HUB_RELATION)
 
         def color_check(color: str) -> bool:
             try:
@@ -76,14 +77,14 @@ class Application(tk.Tk):
             """
             Places a hub on the canvas using x and y pixel coordinates.
             """
-            x += CELL_W // 2
-            y += CELL_H // 2
+            x += HUB_W
+            y += HUB_H
             canvas.create_oval(x, y, x + HUB_W, y + HUB_H, activefill="cyan",
                                fill=color, outline="black", width=2)
             canvas.create_text(
                 x + HUB_W // 2, y + HUB_H // 2, state="disabled",
                 text=name.capitalize() + "\nDrones: " + str(drones),
-                justify="center", fill=letter, font=("Arial", 10))
+                justify="center", offset="center", fill=letter, font=("Arial", 10))
 
         def put_conn(canvas: tk.Canvas, conn: Connection) -> None:
             """
@@ -100,6 +101,9 @@ class Application(tk.Tk):
             y_middle = int(HUB_H * 1.5)  # Middle of circle height
             y_bottom = HUB_H * 2 + 10  # Bottom of circle
 
+            #Coordinates to move the drone count out of the line
+            text_x, text_y = 0, -10
+
             hub1_x, hub1_y = conn.hubs[0].x, conn.hubs[0].y
             hub2_x, hub2_y = conn.hubs[1].x, conn.hubs[1].y
 
@@ -113,15 +117,27 @@ class Application(tk.Tk):
                 x2 = hub2_x * CELL_W + MARGIN + x_middle
                 y1 = hub1_y * CELL_H + MARGIN + y_bottom
                 y2 = hub2_y * CELL_H + MARGIN + y_top
+                text_x = 10
+                text_y = 0
                 if hub1_y > hub2_y:
                     y1 = hub1_y * CELL_H + MARGIN + y_top
                     y2 = hub2_y * CELL_H + MARGIN + y_bottom
             elif hub1_x > hub2_x:
                 x1 = hub1_x * CELL_W + MARGIN + x_left
                 x2 = hub2_x * CELL_W + MARGIN + x_right
+            if hub1_y > hub2_y:
+                text_x = -10
+                text_y = 0
+            elif hub1_y < hub2_y:
+                text_x = 10
+                text_y = 0
 
-            canvas.create_line(x1, y1, x2, y2,
+            line = canvas.create_line(x1, y1, x2, y2,
                                smooth=True, width=3, activefill="red")
+            canvas.create_text(text_x + x1 + (x2 - x1) // 2,
+                               text_y + y1 + (y2 - y1) // 2,
+                               state="disabled", font=("Arial", 10),
+                               justify="center", text=str(len(conn.drones_in)))
 
         try:
             self.clear_grid()
