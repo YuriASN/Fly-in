@@ -72,16 +72,18 @@ class Application(tk.Tk):
                 return False
 
         def put_hub(canvas: tk.Canvas, color: str, letter: str,
-                    x: int, y: int, name: str) -> None:
+                    x: int, y: int, name: str, drones: int) -> None:
             """
             Places a hub on the canvas using x and y pixel coordinates.
             """
             x += CELL_W // 2
             y += CELL_H // 2
-            canvas.create_oval(x, y, x + HUB_W, y + HUB_H,
+            canvas.create_oval(x, y, x + HUB_W, y + HUB_H, activefill="cyan",
                                fill=color, outline="black", width=2)
-            canvas.create_text(x + HUB_W // 2, y + HUB_H // 2,
-                               text=name, fill=letter, font=("Arial", 10))
+            canvas.create_text(
+                x + HUB_W // 2, y + HUB_H // 2, state="disabled",
+                text=name.capitalize() + "\nDrones: " + str(drones),
+                justify="center", fill=letter, font=("Arial", 10))
 
         def put_conn(canvas: tk.Canvas, conn: Connection) -> None:
             """
@@ -118,7 +120,8 @@ class Application(tk.Tk):
                 x1 = hub1_x * CELL_W + MARGIN + x_left
                 x2 = hub2_x * CELL_W + MARGIN + x_right
 
-            canvas.create_line(x1, y1, x2, y2)
+            canvas.create_line(x1, y1, x2, y2,
+                               smooth=True, width=3, activefill="red")
 
         try:
             self.clear_grid()
@@ -135,15 +138,15 @@ class Application(tk.Tk):
                                    height=min(full_h, max_h),
                                    highlightthickness=0)
 
+            for conn in map.connections:
+                put_conn(hub_canvas, conn)
+
             for hub in [*map.hubs, map.start_hub, map.end_hub]:
                 letter = "white" if hub.color == "black" else "black"
                 color = hub.color if color_check(hub.color) else "white"
                 put_hub(hub_canvas, color, letter,
                         hub.x * CELL_W + MARGIN, hub.y * CELL_H + MARGIN,
-                        hub.name)
-
-            for conn in map.connections:
-                put_conn(hub_canvas, conn)
+                        hub.name, len(hub.drones_in))
 
             scroll_y = tk.Scrollbar(map_root, orient=tk.VERTICAL,
                                     command=hub_canvas.yview)
