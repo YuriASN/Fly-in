@@ -60,8 +60,8 @@ def get_maps(location: str) -> List[Level]:
             raise TypeError(
                 f"{C_RED}'{location}' isn't a directory.{C_CLEAR}")
         maps_path = [map for map in parent_dir.rglob("*.txt") if map.is_file()]
-        for map in maps_path:
-            all_maps.append(map_creator(map))
+        for path in maps_path:
+            all_maps.append(map_creator(path))
 
         fix_coordinates(all_maps)
     except Exception as err:
