@@ -54,6 +54,7 @@ class Application(tk.Tk):
         self.current_map: tk.Frame | None = None
         self.get_levels_grid(levels)
         self.menu_widget()
+        self.control_widget()
         self.home_loader()
         self.grid()
 
@@ -61,6 +62,44 @@ class Application(tk.Tk):
         grids = self.grid_slaves(row=1)
         for grid in grids:
             grid.grid_forget()
+
+    def move_foward(self) -> None:
+        pass
+
+    def move_backward(self) -> None:
+        pass
+
+    def play_pause(self) -> None:
+        pass
+
+    def control_widget(self) -> None:
+        def foward_widget(self) -> None:
+            self.foward_button = tk.Button(
+                self.control_frame, text="->", padx=6, pady=6,
+                font=(FONT, FONT_SZ), state="disabled",
+                command=self.move_foward)
+            self.foward_button.grid(row=0, column=2)
+
+        def backward_widget(self) -> None:
+            self.backward_button = tk.Button(
+                self.control_frame, text="<-", padx=6, pady=6,
+                font=(FONT, FONT_SZ), state="disabled",
+                command=self.move_backward)
+            self.backward_button.grid(row=0, column=0)
+
+        def play_pause_widget(self) -> None:
+            self.play_button = tk.Button(
+                self.control_frame, text="⏯", padx=6, pady=6,
+                font=(FONT, FONT_SZ), state="disabled",
+                command=self.play_pause)
+            self.play_button.grid(row=0, column=1)
+
+        self.control_frame = tk.LabelFrame(self, labelanchor="nw",
+                                           text="Controls", padx=6, pady=6,
+                                           font=(FONT, FONT_SZ))
+        foward_widget(self)
+        backward_widget(self)
+        play_pause_widget(self)
 
     def map_put(self, map: Map) -> None:
         CELL_W, CELL_H, MARGIN = 240, 120, 60
@@ -174,6 +213,7 @@ class Application(tk.Tk):
                         hub.x * CELL_W + MARGIN, hub.y * CELL_H + MARGIN,
                         hub.name, len(hub.drones_in))
 
+            # Set scroll for big maps
             scroll_y = tk.Scrollbar(map_root, orient=tk.VERTICAL,
                                     command=hub_canvas.yview)
             scroll_x = tk.Scrollbar(map_root, orient=tk.HORIZONTAL,
@@ -195,6 +235,9 @@ class Application(tk.Tk):
             scroll_x.grid(row=1, column=0, sticky="ew")
 
             map_root.grid(row=1, column=0, padx=4, pady=4, sticky="nsew")
+
+            # Show the control frame
+            self.control_frame.grid(row=0, column=0, sticky="N")
 
             self.update_idletasks()
 
@@ -238,6 +281,9 @@ class Application(tk.Tk):
                 each["frame"].grid(row=1, column=i)
                 for j, buttom in enumerate(each["maps"]):
                     buttom.grid(column=0, row=j)
+
+            # Hide the control frame
+            self.control_frame.grid_forget()
 
         except Exception as err:
             raise Exception(f"{C_RED}Loading map: {err}"
