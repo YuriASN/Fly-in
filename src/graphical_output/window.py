@@ -76,21 +76,21 @@ class Application(tk.Tk):
         def foward_widget(self) -> None:
             self.foward_button = tk.Button(
                 self.control_frame, text="->", padx=6, pady=6,
-                font=(FONT, FONT_SZ), state="disabled",
+                font=(FONT, FONT_SZ),
                 command=self.move_foward)
             self.foward_button.grid(row=0, column=2)
 
         def backward_widget(self) -> None:
             self.backward_button = tk.Button(
                 self.control_frame, text="<-", padx=6, pady=6,
-                font=(FONT, FONT_SZ), state="disabled",
+                font=(FONT, FONT_SZ),
                 command=self.move_backward)
             self.backward_button.grid(row=0, column=0)
 
         def play_pause_widget(self) -> None:
             self.play_button = tk.Button(
                 self.control_frame, text="⏯", padx=6, pady=6,
-                font=(FONT, FONT_SZ), state="disabled",
+                font=(FONT, FONT_SZ),
                 command=self.play_pause)
             self.play_button.grid(row=0, column=1)
 
@@ -179,14 +179,20 @@ class Application(tk.Tk):
                 justf = "left"
                 text_y = 0
 
-            tag = str(conn.names)
+            tag = "_".join(conn.names)
             canvas.create_line(x1, y1, x2, y2, tags=tag,
-                               smooth=True, width=1, activefill="red")
+                               smooth=True, width=2, activefill="red")
             canvas.create_text(text_x + x1 + (x2 - x1) // 2,
-                               text_y + y1 + (y2 - y1) // 2,
-                               state="disabled", font=(FONT, FONT_SZ),
-                               tags=tag,
-                               text=str(len(conn.drones_in)), justify=justf)
+                               text_y + y1 + (y2 - y1) // 2, tags=tag,
+                               font=(FONT, FONT_SZ), activefill="red",
+                               text=str(len(conn.drones_in)))#, justify=justf)
+
+            # Bind tags of line and text to change both colors when hovering
+            canvas.tag_bind(tag, "<Enter>",
+                lambda e: canvas.itemconfig(tag, fill="red"))
+
+            canvas.tag_bind(tag, "<Leave>",
+                            lambda e: canvas.itemconfig(tag, fill="black"))
 
         try:
             self.clear_grid()
