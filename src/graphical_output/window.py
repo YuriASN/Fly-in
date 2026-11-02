@@ -84,7 +84,8 @@ class Application(tk.Tk):
             canvas.create_text(
                 x + HUB_W // 2, y + HUB_H // 2, state="disabled",
                 text=name.capitalize() + "\nDrones: " + str(drones),
-                justify="center", offset="center", fill=letter, font=("Arial", 10))
+                justify="center", offset="center", fill=letter,
+                font=("Arial", 10))
 
         def put_conn(canvas: tk.Canvas, conn: Connection) -> None:
             """
@@ -101,8 +102,9 @@ class Application(tk.Tk):
             y_middle = int(HUB_H * 1.5)  # Middle of circle height
             y_bottom = HUB_H * 2 + 10  # Bottom of circle
 
-            #Coordinates to move the drone count out of the line
+            # Coordinates to move the drone count out of the line
             text_x, text_y = 0, -10
+            justf = "center"
 
             hub1_x, hub1_y = conn.hubs[0].x, conn.hubs[0].y
             hub2_x, hub2_y = conn.hubs[1].x, conn.hubs[1].y
@@ -118,6 +120,7 @@ class Application(tk.Tk):
                 y1 = hub1_y * CELL_H + MARGIN + y_bottom
                 y2 = hub2_y * CELL_H + MARGIN + y_top
                 text_x = 10
+                justf = "left"
                 text_y = 0
                 if hub1_y > hub2_y:
                     y1 = hub1_y * CELL_H + MARGIN + y_top
@@ -127,17 +130,20 @@ class Application(tk.Tk):
                 x2 = hub2_x * CELL_W + MARGIN + x_right
             if hub1_y > hub2_y:
                 text_x = -10
+                justf = "right"
                 text_y = 0
             elif hub1_y < hub2_y:
                 text_x = 10
+                justf = "left"
                 text_y = 0
 
-            line = canvas.create_line(x1, y1, x2, y2,
-                               smooth=True, width=3, activefill="red")
+            tag = str(conn.names)
+            canvas.create_line(x1, y1, x2, y2, tags=tag,
+                               smooth=True, width=1, activefill="red")
             canvas.create_text(text_x + x1 + (x2 - x1) // 2,
                                text_y + y1 + (y2 - y1) // 2,
-                               state="disabled", font=("Arial", 10),
-                               justify="center", text=str(len(conn.drones_in)))
+                               state="disabled", font=("Arial", 10), tags=tag,
+                               text=str(len(conn.drones_in)), justify=justf)
 
         try:
             self.clear_grid()
