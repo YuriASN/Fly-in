@@ -242,8 +242,9 @@ class Application(tk.Tk):
             self.update_idletasks()
 
         except Exception as err:
-            raise Exception(f"{C_RED}While putting map '{map.name}': {err}"
-                            f"{C_CLEAR}\n\n{traceback.format_exc()}")
+            print(f"{C_RED}While putting map '{map.name}': {err}"
+                  f"{C_CLEAR}\n\n{traceback.format_exc()}")
+            self.home_loader()
 
     def get_levels_grid(self, levels: List[Level]) -> None:
         """
