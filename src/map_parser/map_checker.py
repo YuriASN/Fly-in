@@ -223,6 +223,7 @@ def map_creator(map_file: Path) -> Map:
                         drones.append(Drone())
         name = map_file.name[map_file.name.find("_") + 1:]
         name = name[:name.rfind(".")].replace("_", " ").title()
+        start_hub.drones_in = drones
         map = Map(name=name, level=map_file.parent.name,
                   start_hub=start_hub, end_hub=end_hub,
                   hubs=hubs, connections=connections)
