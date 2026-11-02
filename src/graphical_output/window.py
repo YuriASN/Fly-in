@@ -8,6 +8,8 @@ import traceback
 
 C_RED = Fore.RED
 C_CLEAR = Style.RESET_ALL
+FONT = "Arial"
+FONT_SZ = 10
 
 
 class LevelData(TypedDict):
@@ -79,13 +81,14 @@ class Application(tk.Tk):
             """
             x += HUB_W
             y += HUB_H
-            canvas.create_oval(x, y, x + HUB_W, y + HUB_H, activefill="cyan",
-                               fill=color, outline="black", width=2)
+            canvas.create_oval(x, y, x + HUB_W, y + HUB_H, fill=color,
+                               outline=color,
+                               activefill="cyan", activeoutline="blue")
             canvas.create_text(
                 x + HUB_W // 2, y + HUB_H // 2, state="disabled",
                 text=name.capitalize() + "\nDrones: " + str(drones),
                 justify="center", offset="center", fill=letter,
-                font=("Arial", 10))
+                font=(FONT, FONT_SZ))
 
         def put_conn(canvas: tk.Canvas, conn: Connection) -> None:
             """
@@ -142,13 +145,14 @@ class Application(tk.Tk):
                                smooth=True, width=1, activefill="red")
             canvas.create_text(text_x + x1 + (x2 - x1) // 2,
                                text_y + y1 + (y2 - y1) // 2,
-                               state="disabled", font=("Arial", 10), tags=tag,
+                               state="disabled", font=(FONT, FONT_SZ),
+                               tags=tag,
                                text=str(len(conn.drones_in)), justify=justf)
 
         try:
             self.clear_grid()
             map_root = tk.LabelFrame(self, text=map.name, labelanchor="nw",
-                                     font=("Arial", 10))
+                                     font=(FONT, FONT_SZ))
             full_w = map.grid_size.x * CELL_W + MARGIN * 2
             full_h = map.grid_size.y * CELL_H + MARGIN * 2
             # Cap the *visible* size to a portion of the screen
@@ -241,25 +245,24 @@ class Application(tk.Tk):
 
     def menu_widget(self) -> None:
         def quit_widget(self) -> None:
-            self.menu.quit_button = tk.Button(self.menu, text="Quit",
-                                              padx=6, pady=6,
-                                              font=("Arial", 10),
-                                              command=self.quit)
-            self.menu.quit_button.grid(row=0, column=1)
+            self.quit_button = tk.Button(
+                self.menu_frame, text="Quit", padx=6, pady=6,
+                font=(FONT, FONT_SZ), command=self.quit)
+            self.quit_button.grid(row=0, column=1)
 
         def home_widget(self) -> None:
-            self.menu.home_buttom = tk.Button(self.menu, text="Home",
-                                              padx=6, pady=6,
-                                              font=("Arial", 10),
-                                              command=self.home_loader)
-            self.menu.home_buttom.grid(row=0, column=0)
+            self.home_buttom = tk.Button(
+                self.menu_frame, text="Home", padx=6, pady=6,
+                font=(FONT, FONT_SZ), command=self.home_loader)
+            self.home_buttom.grid(row=0, column=0)
 
         try:
-            self.menu = tk.LabelFrame(self, labelanchor="nw", text="Menu",
-                                      padx=6, pady=6, font=("Arial", 10))
+            self.menu_frame = tk.LabelFrame(
+                self, labelanchor="nw", text="Menu", padx=6, pady=6,
+                font=(FONT, FONT_SZ))
             quit_widget(self)
             home_widget(self)
-            self.menu.grid(row=0, column=0, sticky="NW")
+            self.menu_frame.grid(row=0, column=0, sticky="NW")
 
         except Exception as err:
             raise Exception(f"{C_RED}Creating menu: {err}"
