@@ -103,6 +103,8 @@ class Map(BaseModel):
     turn: int = Field(default=0, description="Current turn")
     grid_size: Coordinates = Field(default_factory=Coordinates,
                                    description="Size of the grid")
+    total_drones: int = Field(...,
+                              description="Total amount of drones on this map")
 
     @model_validator(mode="after")
     def validate_map(self) -> "Map":
@@ -219,6 +221,7 @@ def map_creator(map_file: Path) -> Map:
                     if drones:
                         raise DuplicatedError(
                             "Variable 'nb_drones' is duplicated!")
+                    nb_drones = int(value)
                     for _ in range(int(value)):
                         drones.append(Drone())
         name = map_file.name[map_file.name.find("_") + 1:]
@@ -226,7 +229,7 @@ def map_creator(map_file: Path) -> Map:
         start_hub.drones_in = drones
         map = Map(name=name, level=map_file.parent.name,
                   start_hub=start_hub, end_hub=end_hub,
-                  hubs=hubs, connections=connections)
+                  hubs=hubs, connections=connections, total_drones=nb_drones)
 
     except (ValidationError, DuplicatedError) as err:
         raise Exception(
