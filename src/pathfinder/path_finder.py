@@ -1,4 +1,4 @@
-from ..map_parser import Hub, Connection
+from map_parser import Hub, Connection
 from typing import List
 from pydantic import Field, BaseModel, ValidationError
 import traceback
