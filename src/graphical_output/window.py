@@ -74,7 +74,7 @@ class Application(tk.Tk):
             if grid.cget("text") != "Menu":
                 grid.grid_forget()
 
-    def move_forward(self) -> None:
+    def move_forward(self, from_play: bool = False) -> None:
         if not self.map or not self.paths:
             raise ValueError(f"{C_RED}No map or path available to move forward"
                              f"{C_CLEAR}\n\n{traceback.format_exc()}")
@@ -83,6 +83,11 @@ class Application(tk.Tk):
             self.control_widget(backward=True)
         if self.map.total_drones == len(self.map.end_hub.drones_in):
             self.control_widget(forward=False, play=False)
+
+        # Stop the play if Next is hit during it's execution
+        if self.playing is True and from_play is False:
+            self.playing = False
+            
         self.map_put(self.map)
 
     def move_backwards(self) -> None:
@@ -95,25 +100,41 @@ class Application(tk.Tk):
         self.map = step_backwards(self.map, self.paths)
         if self.map.turn == 0:
             self.control_widget(backward=False)
+
+        # Stop the play if Prev. is hit during it's execution
+        if self.playing:
+            self.playing = False
         self.map_put(self.map)
 
-    def play_pause(self, loop: bool = False) -> None:
+    def play_pause(self, loop_call: bool = False) -> None:
+        def stop_play() -> None:
+            self.playing = False
+            self.play_button.configure(text="Play")
+
         if not self.map:
             raise ValueError(f"{C_RED}No map available to play!"
                              f"{C_CLEAR}\n\n{traceback.format_exc()}")
 
-        if self.playing and (self.play_button.cget("state") == "disabled" or
-                             not loop):
-            self.control_widget(play=False)
-            self.play_button.configure(text="Play")
+        """ Stops if isn't a loop call and it's playing (when click pause).
+        Or if it's a loop call and button was disable (no more turns).
+        Or it's a loop call but playing is false (Prev. or Next clicked)"""
+        if (
+            (loop_call is False and self.playing is True)
+            or
+            (loop_call is True and (
+                self.play_button.cget("state") == "disabled"
+                or self.playing is False))
+        ):
+            stop_play()
             return
 
-        if not self.playing:
+        if not self.playing and not loop_call:
             self.playing = True
             self.play_button.configure(text="Pause")
-
-        self.move_forward()
-        self.after(self.speed, self.play_pause, True)
+        
+        if self.playing:
+            self.move_forward(True)
+            self.after(self.speed, self.play_pause, True)
 
     def control_widget(self, forward: bool | None = None,
                        backward: bool | None = None,
@@ -154,7 +175,7 @@ class Application(tk.Tk):
 
             self.play_button = tk.Button(
                 self.control_frame, text="Play", padx=6, pady=6,
-                font=(FONT, FONT_SZ),
+                font=(FONT, FONT_SZ), width=5,
                 command=self.play_pause)
             self.play_button.grid(row=0, column=1)
 
