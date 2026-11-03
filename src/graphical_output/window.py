@@ -60,6 +60,8 @@ class Application(tk.Tk):
         self.map_canvas: tk.Canvas | None = None
         self.scroll_x: tk.Scrollbar | None = None
         self.scroll_y: tk.Scrollbar | None = None
+        self.playing: bool = False
+        self.speed = 700
         self.get_levels_grid(levels)
         self.menu_widget()
         self.control_widget()
@@ -95,13 +97,23 @@ class Application(tk.Tk):
             self.control_widget(backward=False)
         self.map_put(self.map)
 
-    def play_pause(self) -> None:
+    def play_pause(self, loop: bool = False) -> None:
         if not self.map:
             raise ValueError(f"{C_RED}No map available to play!"
                              f"{C_CLEAR}\n\n{traceback.format_exc()}")
-        while len(self.map.end_hub.drones_in) != self.map.total_drones:
-            self.move_forward()
-            sleep(0.5)
+
+        if self.playing and (self.play_button.cget("state") == "disabled" or
+                             not loop):
+            self.control_widget(play=False)
+            self.play_button.configure(text="Play")
+            return
+
+        if not self.playing:
+            self.playing = True
+            self.play_button.configure(text="Pause")
+
+        self.move_forward()
+        self.after(self.speed, self.play_pause, True)
 
     def control_widget(self, forward: bool | None = None,
                        backward: bool | None = None,
@@ -130,18 +142,18 @@ class Application(tk.Tk):
                                                font=(FONT, FONT_SZ),
                                                name="control")
             self.forward_button = tk.Button(
-                self.control_frame, text=">>", padx=6, pady=6,
+                self.control_frame, text="Next", padx=6, pady=6,
                 font=(FONT, FONT_SZ), command=self.move_forward)
             self.forward_button.grid(row=0, column=2)
 
             self.backward_button = tk.Button(
-                self.control_frame, text="<<", padx=6, pady=6,
+                self.control_frame, text="Prev.", padx=6, pady=6,
                 font=(FONT, FONT_SZ), state="disabled",
                 command=self.move_backwards)
             self.backward_button.grid(row=0, column=0)
 
             self.play_button = tk.Button(
-                self.control_frame, text="> / ||", padx=6, pady=6,
+                self.control_frame, text="Play", padx=6, pady=6,
                 font=(FONT, FONT_SZ),
                 command=self.play_pause)
             self.play_button.grid(row=0, column=1)
@@ -366,6 +378,7 @@ class Application(tk.Tk):
                 self.map = None
                 self.paths = None
                 self.control_widget(forward=True, backward=False, play=True)
+                self.playing = False
 
             self.clear_grid()
             for i, each in enumerate(self.levels):
