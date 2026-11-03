@@ -1,6 +1,6 @@
 import tkinter as tk
 from typing import Tuple, List, TypedDict
-from map_parser import Level, Map, Connection, step_backwards, step_foward
+from map_parser import Level, Map, Connection, step_backwards, step_forward
 from pathfinder import get_path, Path
 from colorama import Fore, Style
 from functools import partial
@@ -57,6 +57,9 @@ class Application(tk.Tk):
         self.map_frame: tk.LabelFrame | None = None
         self.map: Map | None = None
         self.paths: List[Path] | None = None
+        self.map_canvas: tk.Canvas | None = None
+        self.scroll_x: tk.Scrollbar | None = None
+        self.scroll_y: tk.Scrollbar | None = None
         self.get_levels_grid(levels)
         self.menu_widget()
         self.control_widget()
@@ -69,15 +72,15 @@ class Application(tk.Tk):
             if grid.cget("text") != "Menu":
                 grid.grid_forget()
 
-    def move_foward(self) -> None:
+    def move_forward(self) -> None:
         if not self.map or not self.paths:
-            raise ValueError(f"{C_RED}No map or path available to move foward"
+            raise ValueError(f"{C_RED}No map or path available to move forward"
                              f"{C_CLEAR}\n\n{traceback.format_exc()}")
-        self.map = step_foward(self.map, self.paths)
+        self.map = step_forward(self.map, self.paths)
         if self.map.turn == 1:
             self.control_widget(backward=True)
         if self.map.total_drones == len(self.map.end_hub.drones_in):
-            self.control_widget(foward=False, play=False)
+            self.control_widget(forward=False, play=False)
         self.map_put(self.map)
 
     def move_backwards(self) -> None:
@@ -96,19 +99,18 @@ class Application(tk.Tk):
         if not self.map:
             raise ValueError(f"{C_RED}No map available to play!"
                              f"{C_CLEAR}\n\n{traceback.format_exc()}")
-        pass
-        while len(self.map.end_hub.drones_in) is not self.map.total_drones:
-            self.move_foward()
+        while len(self.map.end_hub.drones_in) != self.map.total_drones:
+            self.move_forward()
             sleep(0.5)
 
-    def control_widget(self, foward: bool | None = None,
+    def control_widget(self, forward: bool | None = None,
                        backward: bool | None = None,
                        play: bool | None = None) -> None:
-        def foward_widget(activate: bool) -> None:
+        def forward_widget(activate: bool) -> None:
             if activate:
-                self.foward_button.configure(state="normal")
+                self.forward_button.configure(state="normal")
             else:
-                self.foward_button.configure(state="disabled")
+                self.forward_button.configure(state="disabled")
 
         def backward_widget(activate: bool) -> None:
             if activate:
@@ -122,15 +124,15 @@ class Application(tk.Tk):
             else:
                 self.play_button.configure(state="disabled")
 
-        if not all([foward, backward, play]):
+        if all(each is None for each in [forward, backward, play]):
             self.control_frame = tk.LabelFrame(self, labelanchor="nw",
                                                text="Controls", padx=6, pady=6,
                                                font=(FONT, FONT_SZ),
                                                name="control")
-            self.foward_button = tk.Button(
+            self.forward_button = tk.Button(
                 self.control_frame, text=">>", padx=6, pady=6,
-                font=(FONT, FONT_SZ), command=self.move_foward)
-            self.foward_button.grid(row=0, column=2)
+                font=(FONT, FONT_SZ), command=self.move_forward)
+            self.forward_button.grid(row=0, column=2)
 
             self.backward_button = tk.Button(
                 self.control_frame, text="<<", padx=6, pady=6,
@@ -144,8 +146,8 @@ class Application(tk.Tk):
                 command=self.play_pause)
             self.play_button.grid(row=0, column=1)
 
-        if isinstance(foward, bool):
-            foward_widget(foward)
+        if isinstance(forward, bool):
+            forward_widget(forward)
         if isinstance(backward, bool):
             backward_widget(backward)
         if isinstance(play, bool):
@@ -239,10 +241,11 @@ class Application(tk.Tk):
 
             # Bind tags of line and text to change both colors when hovering
             canvas.tag_bind(tag, "<Enter>",
-                            lambda e: canvas.itemconfig(tag, fill="red"))
-
+                            lambda e, current_tag=tag:
+                            canvas.itemconfig(current_tag, fill="red"))
             canvas.tag_bind(tag, "<Leave>",
-                            lambda e: canvas.itemconfig(tag, fill="black"))
+                            lambda e, current_tag=tag:
+                            canvas.itemconfig(current_tag, fill="black"))
 
         try:
             if not self.map:
@@ -255,6 +258,13 @@ class Application(tk.Tk):
                 self.map_frame = tk.LabelFrame(
                     self, text=map.name, labelanchor="nw",
                     font=(FONT, FONT_SZ), name=map.name.lower())
+            else:
+                if self.map_canvas is not None:
+                    self.map_canvas.destroy()
+                if self.scroll_x is not None:
+                    self.scroll_x.destroy()
+                if self.scroll_y is not None:
+                    self.scroll_y.destroy()
             full_w = map.grid_size.x * CELL_W + MARGIN * 2
             full_h = map.grid_size.y * CELL_H + MARGIN * 2
 
@@ -262,41 +272,45 @@ class Application(tk.Tk):
             max_w = int(self.winfo_screenwidth() * 0.9)
             max_h = int(self.winfo_screenheight() * 0.8)
 
-            hub_canvas = tk.Canvas(self.map_frame,
+            map_canvas = tk.Canvas(self.map_frame,
                                    width=min(full_w, max_w),
                                    height=min(full_h, max_h),
                                    highlightthickness=0)
+            self.map_canvas = map_canvas
 
             for conn in map.connections:
-                put_conn(hub_canvas, conn)
+                put_conn(map_canvas, conn)
 
             for hub in [*map.hubs, map.start_hub, map.end_hub]:
                 letter = "white" if hub.color == "black" else "black"
                 color = hub.color if color_check(hub.color) else "white"
-                put_hub(hub_canvas, color, letter,
+                put_hub(map_canvas, color, letter,
                         hub.x * CELL_W + MARGIN, hub.y * CELL_H + MARGIN,
                         hub.name, len(hub.drones_in))
 
             # Set scroll for big maps
-            scroll_y = tk.Scrollbar(self.map_frame, orient=tk.VERTICAL,
-                                    command=hub_canvas.yview)
-            scroll_x = tk.Scrollbar(self.map_frame, orient=tk.HORIZONTAL,
-                                    command=hub_canvas.xview)
-            hub_canvas.configure(xscrollcommand=scroll_x.set,
-                                 yscrollcommand=scroll_y.set)
-            hub_canvas.bind("<MouseWheel>",
-                            lambda e: hub_canvas.yview_scroll(
+            self.scroll_y = tk.Scrollbar(
+                self.map_frame, orient=tk.VERTICAL, command=map_canvas.yview)
+            self.scroll_x = tk.Scrollbar(
+                self.map_frame, orient=tk.HORIZONTAL, command=map_canvas.xview)
+            map_canvas.configure(xscrollcommand=self.scroll_x.set,
+                                 yscrollcommand=self.scroll_y.set)
+            map_canvas.bind("<MouseWheel>",
+                            lambda e: map_canvas.yview_scroll(
                                 -1 * (e.delta // 120), "units"))
-            hub_canvas.bind("<Shift-MouseWheel>",
-                            lambda e: hub_canvas.xview_scroll(
+            map_canvas.bind("<Shift-MouseWheel>",
+                            lambda e: map_canvas.xview_scroll(
                                 -1 * (e.delta // 120), "units"))
-            x1, y1, x2, y2 = hub_canvas.bbox("all")
-            hub_canvas.configure(scrollregion=(x1, y1, x2, y2))
+            bounds = map_canvas.bbox("all")
+            if bounds is None:
+                map_canvas.configure(scrollregion=(0, 0, 0, 0))
+            else:
+                map_canvas.configure(scrollregion=(bounds))
 
             # Canvas at (0,0), vertical bar at (0,1), horizontal bar at (1,0)
-            hub_canvas.grid(row=0, column=0, sticky="nsew", padx=4, pady=4)
-            scroll_y.grid(row=0, column=1, sticky="ns")
-            scroll_x.grid(row=1, column=0, sticky="ew")
+            map_canvas.grid(row=0, column=0, sticky="nsew", padx=4, pady=4)
+            self.scroll_y.grid(row=0, column=1, sticky="ns")
+            self.scroll_x.grid(row=1, column=0, sticky="ew")
 
             self.map_frame.grid(row=1, column=0, padx=4, pady=4, sticky="nsew")
 
@@ -344,17 +358,16 @@ class Application(tk.Tk):
         try:
             if self.map_frame:
                 self.home_button.configure(state="disabled")
-
                 self.map_frame.destroy()
+                self.map_canvas = None
+                self.scroll_x = None
+                self.scroll_y = None
                 self.map_frame = None
-
                 self.map = None
                 self.paths = None
+                self.control_widget(forward=True, backward=False, play=True)
 
-                self.control_widget(foward=True, backward=False, play=True)
-                self.control_frame.grid_forget()
-
-                self.clear_grid()
+            self.clear_grid()
             for i, each in enumerate(self.levels):
                 for j, buttom in enumerate(each["maps"]):
                     buttom.grid(column=0, row=j)
