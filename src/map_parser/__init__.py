@@ -1,5 +1,6 @@
 from .get_map import get_maps, Level
 from .map_checker import Drone, Hub, Connection, Map
+from .movement import step_backwards, step_foward
 
 __all__ = [
     "get_maps",
@@ -7,7 +8,9 @@ __all__ = [
     "Hub",
     "Connection",
     "Map",
-    "Level"
+    "Level",
+    "step_foward",
+    "step_backwards"
 ]
 
 

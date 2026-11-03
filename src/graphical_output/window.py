@@ -1,8 +1,10 @@
 import tkinter as tk
 from typing import Tuple, List, TypedDict
-from map_parser import Level, Map, Connection
+from map_parser import Level, Map, Connection, step_backwards, step_foward
+from pathfinder import get_path, Path
 from colorama import Fore, Style
 from functools import partial
+from time import sleep
 import traceback
 
 
@@ -47,59 +49,107 @@ class Application(tk.Tk):
                 height=int(self.screen_y * 0.8),
                 padx=2, pady=2
             )
+            self.title("Window")
         except Exception as err:
             raise Exception(f"{C_RED}Initializing tkinter: {err}"
                             f"{C_CLEAR}\n\n{traceback.format_exc()}")
 
-        self.current_map: tk.Frame | None = None
+        self.map_frame: tk.LabelFrame | None = None
+        self.map: Map | None = None
+        self.paths: List[Path] | None = None
         self.get_levels_grid(levels)
         self.menu_widget()
         self.control_widget()
         self.home_loader()
         self.grid()
 
-    def clear_grid(self) -> None:
-        grids = self.grid_slaves(row=1)
+    def clear_grid(self, row: int | None = None) -> None:
+        grids = self.grid_slaves(row=row)
         for grid in grids:
-            grid.grid_forget()
+            if grid.cget("text") != "Menu":
+                grid.grid_forget()
 
     def move_foward(self) -> None:
-        pass
+        if not self.map or not self.paths:
+            raise ValueError(f"{C_RED}No map or path available to move foward"
+                             f"{C_CLEAR}\n\n{traceback.format_exc()}")
+        self.map = step_foward(self.map, self.paths)
+        if self.map.turn == 1:
+            self.control_widget(backward=True)
+        if self.map.total_drones == len(self.map.end_hub.drones_in):
+            self.control_widget(foward=False, play=False)
+        self.map_put(self.map)
 
-    def move_backward(self) -> None:
-        pass
+    def move_backwards(self) -> None:
+        if not self.map or not self.paths:
+            raise ValueError(f"{C_RED}No map or path available to move"
+                             f"backwards{C_CLEAR}\n\n{traceback.format_exc()}")
+        if not self.map.turn:
+            raise ValueError(f"{C_RED}No movement done to undo!"
+                             f"{C_CLEAR}\n\n{traceback.format_exc()}")
+        self.map = step_backwards(self.map, self.paths)
+        if self.map.turn == 0:
+            self.control_widget(backward=False)
+        self.map_put(self.map)
 
     def play_pause(self) -> None:
+        if not self.map:
+            raise ValueError(f"{C_RED}No map available to play!"
+                             f"{C_CLEAR}\n\n{traceback.format_exc()}")
         pass
+        while len(self.map.end_hub.drones_in) is not self.map.total_drones:
+            self.move_foward()
+            sleep(0.5)
 
-    def control_widget(self) -> None:
-        def foward_widget(self) -> None:
+    def control_widget(self, foward: bool | None = None,
+                       backward: bool | None = None,
+                       play: bool | None = None) -> None:
+        def foward_widget(activate: bool) -> None:
+            if activate:
+                self.foward_button.configure(state="normal")
+            else:
+                self.foward_button.configure(state="disabled")
+
+        def backward_widget(activate: bool) -> None:
+            if activate:
+                self.backward_button.configure(state="normal")
+            else:
+                self.backward_button.configure(state="disabled")
+
+        def play_pause_widget(activate: bool) -> None:
+            if activate:
+                self.play_button.configure(state="normal")
+            else:
+                self.play_button.configure(state="disabled")
+
+        if not all([foward, backward, play]):
+            self.control_frame = tk.LabelFrame(self, labelanchor="nw",
+                                               text="Controls", padx=6, pady=6,
+                                               font=(FONT, FONT_SZ),
+                                               name="control")
             self.foward_button = tk.Button(
-                self.control_frame, text="->", padx=6, pady=6,
-                font=(FONT, FONT_SZ),
-                command=self.move_foward)
+                self.control_frame, text=">>", padx=6, pady=6,
+                font=(FONT, FONT_SZ), command=self.move_foward)
             self.foward_button.grid(row=0, column=2)
 
-        def backward_widget(self) -> None:
             self.backward_button = tk.Button(
-                self.control_frame, text="<-", padx=6, pady=6,
-                font=(FONT, FONT_SZ),
-                command=self.move_backward)
+                self.control_frame, text="<<", padx=6, pady=6,
+                font=(FONT, FONT_SZ), state="disabled",
+                command=self.move_backwards)
             self.backward_button.grid(row=0, column=0)
 
-        def play_pause_widget(self) -> None:
             self.play_button = tk.Button(
-                self.control_frame, text="⏯", padx=6, pady=6,
+                self.control_frame, text="> / ||", padx=6, pady=6,
                 font=(FONT, FONT_SZ),
                 command=self.play_pause)
             self.play_button.grid(row=0, column=1)
 
-        self.control_frame = tk.LabelFrame(self, labelanchor="nw",
-                                           text="Controls", padx=6, pady=6,
-                                           font=(FONT, FONT_SZ))
-        foward_widget(self)
-        backward_widget(self)
-        play_pause_widget(self)
+        if isinstance(foward, bool):
+            foward_widget(foward)
+        if isinstance(backward, bool):
+            backward_widget(backward)
+        if isinstance(play, bool):
+            play_pause_widget(play)
 
     def map_put(self, map: Map) -> None:
         CELL_W, CELL_H, MARGIN = 240, 120, 60
@@ -185,26 +235,34 @@ class Application(tk.Tk):
             canvas.create_text(text_x + x1 + (x2 - x1) // 2,
                                text_y + y1 + (y2 - y1) // 2, tags=tag,
                                font=(FONT, FONT_SZ), activefill="red",
-                               text=str(len(conn.drones_in)))#, justify=justf)
+                               text=str(len(conn.drones_in)), justify=justf)
 
             # Bind tags of line and text to change both colors when hovering
             canvas.tag_bind(tag, "<Enter>",
-                lambda e: canvas.itemconfig(tag, fill="red"))
+                            lambda e: canvas.itemconfig(tag, fill="red"))
 
             canvas.tag_bind(tag, "<Leave>",
                             lambda e: canvas.itemconfig(tag, fill="black"))
 
         try:
-            self.clear_grid()
-            map_root = tk.LabelFrame(self, text=map.name, labelanchor="nw",
-                                     font=(FONT, FONT_SZ))
+            if not self.map:
+                self.map = map.model_copy(deep=True)
+                self.paths = get_path(
+                    self.map.start_hub, self.map.end_hub.name, [], [])
+
+            self.clear_grid(row=1)
+            if not self.map_frame:
+                self.map_frame = tk.LabelFrame(
+                    self, text=map.name, labelanchor="nw",
+                    font=(FONT, FONT_SZ), name=map.name.lower())
             full_w = map.grid_size.x * CELL_W + MARGIN * 2
             full_h = map.grid_size.y * CELL_H + MARGIN * 2
+
             # Cap the *visible* size to a portion of the screen
             max_w = int(self.winfo_screenwidth() * 0.9)
             max_h = int(self.winfo_screenheight() * 0.8)
 
-            hub_canvas = tk.Canvas(map_root,
+            hub_canvas = tk.Canvas(self.map_frame,
                                    width=min(full_w, max_w),
                                    height=min(full_h, max_h),
                                    highlightthickness=0)
@@ -220,9 +278,9 @@ class Application(tk.Tk):
                         hub.name, len(hub.drones_in))
 
             # Set scroll for big maps
-            scroll_y = tk.Scrollbar(map_root, orient=tk.VERTICAL,
+            scroll_y = tk.Scrollbar(self.map_frame, orient=tk.VERTICAL,
                                     command=hub_canvas.yview)
-            scroll_x = tk.Scrollbar(map_root, orient=tk.HORIZONTAL,
+            scroll_x = tk.Scrollbar(self.map_frame, orient=tk.HORIZONTAL,
                                     command=hub_canvas.xview)
             hub_canvas.configure(xscrollcommand=scroll_x.set,
                                  yscrollcommand=scroll_y.set)
@@ -240,10 +298,15 @@ class Application(tk.Tk):
             scroll_y.grid(row=0, column=1, sticky="ns")
             scroll_x.grid(row=1, column=0, sticky="ew")
 
-            map_root.grid(row=1, column=0, padx=4, pady=4, sticky="nsew")
+            self.map_frame.grid(row=1, column=0, padx=4, pady=4, sticky="nsew")
 
-            # Show the control frame
-            self.control_frame.grid(row=0, column=0, sticky="N")
+            # Update the control frame if changed
+            if not self.control_frame.winfo_ismapped():
+                self.control_frame.grid(row=0, column=0, sticky="N")
+
+            # Activate home button if not activated
+            if self.home_button.cget("state") != "normal":
+                self.home_button.configure(state="normal")
 
             self.update_idletasks()
 
@@ -260,7 +323,7 @@ class Application(tk.Tk):
             self.levels: List[LevelData] = []
             for level in levels:
                 new_lf = tk.LabelFrame(self, labelanchor="nw", text=level.name,
-                                       padx=6, pady=6)
+                                       padx=6, pady=6, name=level.name.lower())
                 maps_buttoms: List[tk.Button] = []
                 for map in level.maps:
                     maps_buttoms.append(
@@ -279,18 +342,23 @@ class Application(tk.Tk):
     def home_loader(self) -> None:
         "Goes to the map choosing screen"
         try:
-            if self.current_map:
-                self.current_map.grid_forget()
-                self.current_map.destroy()
-                self.current_map = None
-            self.clear_grid()
+            if self.map_frame:
+                self.home_button.configure(state="disabled")
+
+                self.map_frame.destroy()
+                self.map_frame = None
+
+                self.map = None
+                self.paths = None
+
+                self.control_widget(foward=True, backward=False, play=True)
+                self.control_frame.grid_forget()
+
+                self.clear_grid()
             for i, each in enumerate(self.levels):
-                each["frame"].grid(row=1, column=i)
                 for j, buttom in enumerate(each["maps"]):
                     buttom.grid(column=0, row=j)
-
-            # Hide the control frame
-            self.control_frame.grid_forget()
+                each["frame"].grid(row=1, column=i)
 
         except Exception as err:
             raise Exception(f"{C_RED}Loading map: {err}"
@@ -298,23 +366,26 @@ class Application(tk.Tk):
 
     def menu_widget(self) -> None:
         def quit_widget(self) -> None:
-            self.quit_button = tk.Button(
+            quit_button = tk.Button(
                 self.menu_frame, text="Quit", padx=6, pady=6,
                 font=(FONT, FONT_SZ), command=self.quit)
-            self.quit_button.grid(row=0, column=1)
+            quit_button.grid(row=0, column=1)
 
-        def home_widget(self) -> None:
-            self.home_buttom = tk.Button(
+        def home_widget(self) -> tk.Button:
+            home_button = tk.Button(
                 self.menu_frame, text="Home", padx=6, pady=6,
-                font=(FONT, FONT_SZ), command=self.home_loader)
-            self.home_buttom.grid(row=0, column=0)
+                font=(FONT, FONT_SZ), command=self.home_loader,
+                state="disabled")
+            home_button.grid(row=0, column=0)
+
+            return home_button
 
         try:
             self.menu_frame = tk.LabelFrame(
                 self, labelanchor="nw", text="Menu", padx=6, pady=6,
-                font=(FONT, FONT_SZ))
+                font=(FONT, FONT_SZ), name="menu")
             quit_widget(self)
-            home_widget(self)
+            self.home_button = home_widget(self)
             self.menu_frame.grid(row=0, column=0, sticky="NW")
 
         except Exception as err:

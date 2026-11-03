@@ -1,6 +1,6 @@
 #!.venv/bin pyhton3.10
 from .window import Application
-from ..map_parser import get_maps
+from map_parser import get_maps
 
 if __name__ == "__main__":
     try:
