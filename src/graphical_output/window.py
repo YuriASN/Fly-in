@@ -1,5 +1,5 @@
 import tkinter as tk
-from typing import Tuple, List, TypedDict
+from typing import Tuple, List, TypedDict, Literal
 from map_parser import Level, Map, Connection, step_backwards, step_forward
 from pathfinder import get_path, Path
 from colorama import Fore, Style
@@ -230,7 +230,7 @@ class Application(tk.Tk):
 
             # Coordinates to move the drone count out of the line
             text_x, text_y = 0, -10
-            justf = "center"
+            justf: Literal["left", "center", "right"] = "center"
 
             hub1_x, hub1_y = conn.hubs[0].x, conn.hubs[0].y
             hub2_x, hub2_y = conn.hubs[1].x, conn.hubs[1].y
