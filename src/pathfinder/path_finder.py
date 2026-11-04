@@ -38,7 +38,7 @@ def get_path(hub: Hub, end: str, all_paths: List[Path],
             else:
                 next_hub = link.hubs[0]
             if any(next_hub.name in conn.names for conn in conns):
-                    continue
+                continue
             if next_hub.zone == "blocked":
                 continue
             elif next_hub.zone == "restricted":

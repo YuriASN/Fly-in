@@ -13,7 +13,7 @@ C_CLEAR = Style.RESET_ALL
 
 def remove_double(paths: List[Path]) -> List[Path]:
     """
-    Remove all the paths that goes though a hub that's already being used.
+    Remove all the paths that goes through a hub that's already being used.
     (Start and end hub are not counted)
     """
     passed_names: List[str] = []
