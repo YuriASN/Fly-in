@@ -77,8 +77,8 @@ class Connection(BaseModel):
     @model_validator(mode="after")
     def conn_validate(self) -> "Connection":
         # Validate if connection is duplicated
-        hub1_links = [id(link) for link in self.hubs[0]]
-        hub2_links = [id(link) for link in self.hubs[1]]
+        hub1_links = ["_".join(sorted(link.names)) for link in self.hubs[0].links]
+        hub2_links = ["_".join(sorted(link.names)) for link in self.hubs[1].links]
         if len(set(hub1_links)) != len(hub1_links) or \
            len(set(hub2_links)) != len(hub2_links):
             raise DuplicatedError(
@@ -103,7 +103,7 @@ class Map(BaseModel):
     turn: int = Field(default=0, description="Current turn")
     grid_size: Coordinates = Field(default_factory=Coordinates,
                                    description="Size of the grid")
-    total_drones: int = Field(...,
+    total_drones: int = Field(..., ge=1,
                               description="Total amount of drones on this map")
 
     @model_validator(mode="after")
@@ -222,6 +222,11 @@ def map_creator(map_file: Path) -> Map:
                         raise DuplicatedError(
                             "Variable 'nb_drones' is duplicated!")
                     nb_drones = int(value)
+                    if nb_drones < 1:
+                        raise ValueError(
+                            f"Number of drones '{nb_drones}'"
+                            "isn't greater than 0!"
+                        )
                     for _ in range(int(value)):
                         drones.append(Drone())
         name = map_file.name[map_file.name.find("_") + 1:]
