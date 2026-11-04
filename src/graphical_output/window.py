@@ -4,7 +4,6 @@ from map_parser import Level, Map, Connection, step_backwards, step_forward
 from pathfinder import get_path, Path
 from colorama import Fore, Style
 from functools import partial
-from time import sleep
 import traceback
 
 
@@ -87,7 +86,7 @@ class Application(tk.Tk):
         # Stop the play if Next is hit during it's execution
         if self.playing is True and from_play is False:
             self.playing = False
-            
+
         self.map_put(self.map)
 
     def move_backwards(self) -> None:
@@ -131,7 +130,7 @@ class Application(tk.Tk):
         if not self.playing and not loop_call:
             self.playing = True
             self.play_button.configure(text="Pause")
-        
+
         if self.playing:
             self.move_forward(True)
             self.after(self.speed, self.play_pause, True)
@@ -206,13 +205,13 @@ class Application(tk.Tk):
             x += HUB_W
             y += HUB_H
             canvas.create_oval(x, y, x + HUB_W, y + HUB_H, fill=color,
-                               outline=color,
+                               outline=color, tags=[name, "hub"],
                                activefill="cyan", activeoutline="blue")
             canvas.create_text(
                 x + HUB_W // 2, y + HUB_H // 2, state="disabled",
                 text=name.capitalize() + "\nDrones: " + str(drones),
                 justify="center", offset="center", fill=letter,
-                font=(FONT, FONT_SZ))
+                font=(FONT, FONT_SZ), tags=[name, "text"])
 
         def put_conn(canvas: tk.Canvas, conn: Connection) -> None:
             """
@@ -265,95 +264,115 @@ class Application(tk.Tk):
                 text_y = 0
 
             tag = "_".join(conn.names)
-            canvas.create_line(x1, y1, x2, y2, tags=tag,
+            canvas.create_line(x1, y1, x2, y2, tags=[tag, "line"],
                                smooth=True, width=2, activefill="red")
             canvas.create_text(text_x + x1 + (x2 - x1) // 2,
-                               text_y + y1 + (y2 - y1) // 2, tags=tag,
+                               text_y + y1 + (y2 - y1) // 2,
+                               tags=[tag, "text"],
                                font=(FONT, FONT_SZ), activefill="red",
                                text=str(len(conn.drones_in)), justify=justf)
 
             # Bind tags of line and text to change both colors when hovering
-            canvas.tag_bind(tag, "<Enter>",
-                            lambda e, current_tag=tag:
-                            canvas.itemconfig(current_tag, fill="red"))
-            canvas.tag_bind(tag, "<Leave>",
-                            lambda e, current_tag=tag:
-                            canvas.itemconfig(current_tag, fill="black"))
+            def set_conn_color(_event: tk.Event, curr_tag: str,
+                               color: str) -> None:
+                canvas.itemconfig(tag, fill=color)
+
+            canvas.tag_bind(
+                tag, "<Enter>", partial(
+                    set_conn_color, curr_tag=tag, color="red")
+            )
+            canvas.tag_bind(
+                tag, "<Leave>", partial(
+                    set_conn_color, curr_tag=tag, color="black")
+            )
 
         try:
-            if not self.map:
+            if not self.map:  # Creates the frames hubs and everything
                 self.map = map.model_copy(deep=True)
                 self.paths = get_path(
                     self.map.start_hub, self.map.end_hub.name, [], [])
 
-            self.clear_grid(row=1)
-            if not self.map_frame:
+                self.clear_grid(row=1)
                 self.map_frame = tk.LabelFrame(
                     self, text=map.name, labelanchor="nw",
                     font=(FONT, FONT_SZ), name=map.name.lower())
-            else:
-                if self.map_canvas is not None:
-                    self.map_canvas.destroy()
-                if self.scroll_x is not None:
-                    self.scroll_x.destroy()
-                if self.scroll_y is not None:
-                    self.scroll_y.destroy()
-            full_w = map.grid_size.x * CELL_W + MARGIN * 2
-            full_h = map.grid_size.y * CELL_H + MARGIN * 2
+                full_w = map.grid_size.x * CELL_W + MARGIN * 2
+                full_h = map.grid_size.y * CELL_H + MARGIN * 2
 
-            # Cap the *visible* size to a portion of the screen
-            max_w = int(self.winfo_screenwidth() * 0.9)
-            max_h = int(self.winfo_screenheight() * 0.8)
+                # Cap the *visible* size to a portion of the screen
+                max_w = int(self.winfo_screenwidth() * 0.9)
+                max_h = int(self.winfo_screenheight() * 0.8)
 
-            map_canvas = tk.Canvas(self.map_frame,
-                                   width=min(full_w, max_w),
-                                   height=min(full_h, max_h),
-                                   highlightthickness=0)
-            self.map_canvas = map_canvas
+                map_canvas = tk.Canvas(self.map_frame,
+                                       width=min(full_w, max_w),
+                                       height=min(full_h, max_h),
+                                       highlightthickness=0)
+                self.map_canvas = map_canvas
 
-            for conn in map.connections:
-                put_conn(map_canvas, conn)
+                for conn in map.connections:
+                    put_conn(map_canvas, conn)
 
-            for hub in [*map.hubs, map.start_hub, map.end_hub]:
-                letter = "white" if hub.color == "black" else "black"
-                color = hub.color if color_check(hub.color) else "white"
-                put_hub(map_canvas, color, letter,
-                        hub.x * CELL_W + MARGIN, hub.y * CELL_H + MARGIN,
-                        hub.name, len(hub.drones_in))
+                for hub in [*map.hubs, map.start_hub, map.end_hub]:
+                    letter = "white" if hub.color == "black" else "black"
+                    color = hub.color if color_check(hub.color) else "white"
+                    put_hub(map_canvas, color, letter,
+                            hub.x * CELL_W + MARGIN, hub.y * CELL_H + MARGIN,
+                            hub.name, len(hub.drones_in))
 
-            # Set scroll for big maps
-            self.scroll_y = tk.Scrollbar(
-                self.map_frame, orient=tk.VERTICAL, command=map_canvas.yview)
-            self.scroll_x = tk.Scrollbar(
-                self.map_frame, orient=tk.HORIZONTAL, command=map_canvas.xview)
-            map_canvas.configure(xscrollcommand=self.scroll_x.set,
-                                 yscrollcommand=self.scroll_y.set)
-            map_canvas.bind("<MouseWheel>",
-                            lambda e: map_canvas.yview_scroll(
-                                -1 * (e.delta // 120), "units"))
-            map_canvas.bind("<Shift-MouseWheel>",
-                            lambda e: map_canvas.xview_scroll(
-                                -1 * (e.delta // 120), "units"))
-            bounds = map_canvas.bbox("all")
-            if bounds is None:
-                map_canvas.configure(scrollregion=(0, 0, 0, 0))
-            else:
-                map_canvas.configure(scrollregion=(bounds))
+                # Set scroll for big maps
+                self.scroll_y = tk.Scrollbar(
+                    self.map_frame, orient=tk.VERTICAL,
+                    command=map_canvas.yview)
+                self.scroll_x = tk.Scrollbar(
+                    self.map_frame, orient=tk.HORIZONTAL,
+                    command=map_canvas.xview)
+                map_canvas.configure(xscrollcommand=self.scroll_x.set,
+                                     yscrollcommand=self.scroll_y.set)
+                map_canvas.bind("<MouseWheel>",
+                                lambda e: map_canvas.yview_scroll(
+                                    -1 * (e.delta // 120), "units"))
+                map_canvas.bind("<Shift-MouseWheel>",
+                                lambda e: map_canvas.xview_scroll(
+                                    -1 * (e.delta // 120), "units"))
+                bounds = map_canvas.bbox("all")
+                if bounds is None:
+                    map_canvas.configure(scrollregion=(0, 0, 0, 0))
+                else:
+                    map_canvas.configure(scrollregion=(bounds))
+                self.map_canvas = map_canvas
 
-            # Canvas at (0,0), vertical bar at (0,1), horizontal bar at (1,0)
-            map_canvas.grid(row=0, column=0, sticky="nsew", padx=4, pady=4)
-            self.scroll_y.grid(row=0, column=1, sticky="ns")
-            self.scroll_x.grid(row=1, column=0, sticky="ew")
+                # Canvas at 0,0, vertical bar at 0,1, horizontal bar at 1,0
+                map_canvas.grid(row=0, column=0, sticky="nsew", padx=4, pady=4)
+                self.scroll_y.grid(row=0, column=1, sticky="ns")
+                self.scroll_x.grid(row=1, column=0, sticky="ew")
+                # Activate home button
+                self.home_button.configure(state="normal")
+            elif self.map_canvas:  # Just update the values of the texts
+                for conn in map.connections:
+                    itens = self.map_canvas.find_withtag("_".join(conn.names))
+                    for item in itens:
+                        if "text" in self.map_canvas.itemcget(item, "tags"):
+                            self.map_canvas.itemconfigure(
+                                item, text=str(len(conn.drones_in))
+                            )
+                for hub in [*self.map.hubs,
+                            self.map.start_hub, self.map.end_hub]:
+                    itens = self.map_canvas.find_withtag(hub.name)
+                    for item in itens:
+                        if "text" in self.map_canvas.itemcget(item, "tags"):
+                            self.map_canvas.itemconfigure(
+                                item, text=hub.name.capitalize() +
+                                "\nDrones: " + str(len(hub.drones_in))
+                            )
 
-            self.map_frame.grid(row=1, column=0, padx=4, pady=4, sticky="nsew")
+            if self.map_frame:
+                self.map_frame.grid(
+                    row=1, column=0, padx=4, pady=4, sticky="nsew"
+                )
 
             # Update the control frame if changed
             if not self.control_frame.winfo_ismapped():
                 self.control_frame.grid(row=0, column=0, sticky="N")
-
-            # Activate home button if not activated
-            if self.home_button.cget("state") != "normal":
-                self.home_button.configure(state="normal")
 
             self.update_idletasks()
 
