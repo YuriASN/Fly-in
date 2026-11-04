@@ -77,8 +77,10 @@ class Connection(BaseModel):
     @model_validator(mode="after")
     def conn_validate(self) -> "Connection":
         # Validate if connection is duplicated
-        hub1_links = ["_".join(sorted(link.names)) for link in self.hubs[0].links]
-        hub2_links = ["_".join(sorted(link.names)) for link in self.hubs[1].links]
+        hub1_links = [
+            "_".join(sorted(link.names)) for link in self.hubs[0].links]
+        hub2_links = [
+            "_".join(sorted(link.names)) for link in self.hubs[1].links]
         if len(set(hub1_links)) != len(hub1_links) or \
            len(set(hub2_links)) != len(hub2_links):
             raise DuplicatedError(
