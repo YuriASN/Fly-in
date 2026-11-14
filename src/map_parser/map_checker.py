@@ -1,9 +1,11 @@
 from pydantic import BaseModel, Field, model_validator, ValidationError
-from typing import List, Tuple, Optional, Dict
+from typing import List, Tuple, Optional, Dict, Literal
 from colorama import Style, Fore
 from collections import Counter
 from pathlib import Path
+from abc import ABC
 import traceback
+#import pathfinder
 
 
 C_RED = Fore.RED
@@ -29,10 +31,42 @@ class Drone(BaseModel):
         default=None, description="Next hub it'll go to, when on a link")
 
 
-class Hub(BaseModel):
+class DroneHandlers(ABC, BaseModel):
+    max_drones: int = Field(
+        default=1, ge=0, description="Max of drones it supports")
+    drones_in: List[Drone] = Field(
+        default=[], description="Current drones on it")
+    drone_count: int = Field(
+        default=0, description="The amount of drones on it")
+
+    def put_drone(self, drone: Drone) -> None:
+        """
+        Add a drone to the drones_in list and increase the drone count.
+        """
+        try:
+            self.drones_in.append(drone)
+            self.drone_count += 1
+        except Exception as err:
+            raise Exception(f"Putting drone at '{type(self)}':\n\t{err}")
+
+    def pop_drone(self, index: int = 0) -> Drone:
+        """
+        Remove the drone at the 'index' from the drones_in list and
+        decrease the drone count.
+        """
+        if not self.drone_count:
+            raise ValueError(f"No drone to pop on the '{type(self)}'.")
+        try:
+            self.drone_count -=1
+            return self.drones_in.pop(index)
+        except Exception as err:
+            raise Exception(f"Removing drone from '{type(self)}':\n\t{err}")
+
+
+class Hub(DroneHandlers):
     name: str = Field(
         ..., description="Name of the hub")
-    zone: str = Field(
+    zone: Literal["normal", "restricted", "priority", "blocked"] = Field(
         ..., description="The type of the zone")
     x: int = Field(
         ..., description="X coordinate of the hub")
@@ -40,10 +74,6 @@ class Hub(BaseModel):
         ..., description="Y coordinate of the hub")
     color: str = Field(
         ..., description="Color to representate the hub")
-    max_drones: int = Field(
-        default=1, ge=0, description="Max of drones the hub supports")
-    drones_in: List[Drone] = Field(
-        default=[], description="Current drones on the hub")
     links: List["Connection"] = Field(
         default=[], description="The connections this Hub has outgoing")
 
@@ -64,15 +94,11 @@ class Hub(BaseModel):
         return self
 
 
-class Connection(BaseModel):
+class Connection(DroneHandlers):
     names: List[str] = Field(
         ..., min_length=2, max_length=2, description="Names of both hubs")
     hubs: Tuple[Hub, Hub] = Field(
         ..., description="Tuple with the 2 hubs connected")
-    max_drones: int = Field(
-        default=1, ge=1, description="Max of drones the link supports")
-    drones_in: List[Drone] = Field(
-        default=[], description="List of Drone on the link")
 
     @model_validator(mode="after")
     def conn_validate(self) -> "Connection":
@@ -107,6 +133,8 @@ class Map(BaseModel):
                                    description="Size of the grid")
     total_drones: int = Field(..., ge=1,
                               description="Total amount of drones on this map")
+    paths: List = Field(
+        default=[], description="All the available paths on the map")
 
     @model_validator(mode="after")
     def validate_map(self) -> "Map":
@@ -123,6 +151,36 @@ class Map(BaseModel):
             raise DuplicatedError(f"The {duplicates} are duplicated hubs!")
 
         return self
+
+    def move(self, go_turn: int) -> None:
+        """
+        Move the map the amount of turns provided as an argument.
+        """
+        if go_turn < 0:
+            raise ValueError(
+                f"Turn value '{go_turn}' is invalid.")
+        if not self.paths:
+            raise ValueError(
+                "Moving the map, no 'paths' provided."
+            )
+        from .movement import step_forward, step_backwards
+        if not hasattr(self, "_snapshots"):
+            self._snapshots = {self.turn: self.model_copy(deep=True)}
+        if go_turn == self.turn:
+            return
+        if go_turn in self._snapshots.keys():
+            self.turn = self._snapshots[go_turn].turn
+            self.start_hub = self._snapshots[go_turn].start_hub
+            self.end_hub = self._snapshots[go_turn].end_hub
+            self.hubs = self._snapshots[go_turn].hubs
+            self.connections = self._snapshots[go_turn].connections
+            return
+        if go_turn > self.turn:
+            while go_turn != self.turn:
+                self = step_forward(self)
+                self._snapshots.update({self.turn: self.model_copy(deep=True)})
+        else:
+            raise Exception(f"Turn {go_turn} should be on the snapshot!\nCurr turn {self.turn}")
 
 
 def map_creator(map_file: Path) -> Map:
@@ -234,6 +292,7 @@ def map_creator(map_file: Path) -> Map:
         name = map_file.name[map_file.name.find("_") + 1:]
         name = name[:name.rfind(".")].replace("_", " ").title()
         start_hub.drones_in = drones
+        start_hub.drone_count = len(drones)
         map = Map(name=name, level=map_file.parent.name,
                   start_hub=start_hub, end_hub=end_hub,
                   hubs=hubs, connections=connections, total_drones=nb_drones)

@@ -55,7 +55,6 @@ class Application(tk.Tk):
 
         self.map_frame: tk.LabelFrame | None = None
         self.map: Map | None = None
-        self.paths: List[Path] | None = None
         self.map_canvas: tk.Canvas | None = None
         self.scroll_x: tk.Scrollbar | None = None
         self.scroll_y: tk.Scrollbar | None = None
@@ -74,10 +73,10 @@ class Application(tk.Tk):
                 grid.grid_forget()
 
     def move_forward(self, from_play: bool = False) -> None:
-        if not self.map or not self.paths:
+        if not self.map:
             raise ValueError(f"{C_RED}No map or path available to move forward"
                              f"{C_CLEAR}\n\n{traceback.format_exc()}")
-        self.map = step_forward(self.map, self.paths)
+        self.map.move(self.map.turn + 1)
         if self.map.turn == 1:
             self.control_widget(backward=True)
         if self.map.total_drones == len(self.map.end_hub.drones_in):
@@ -90,13 +89,13 @@ class Application(tk.Tk):
         self.map_put(self.map)
 
     def move_backwards(self) -> None:
-        if not self.map or not self.paths:
+        if not self.map:
             raise ValueError(f"{C_RED}No map or path available to move"
                              f"backwards{C_CLEAR}\n\n{traceback.format_exc()}")
         if not self.map.turn:
             raise ValueError(f"{C_RED}No movement done to undo!"
                              f"{C_CLEAR}\n\n{traceback.format_exc()}")
-        self.map = step_backwards(self.map, self.paths)
+        self.map.move(self.map.turn - 1)
         if self.map.turn == 0:
             self.control_widget(backward=False)
 
@@ -289,7 +288,7 @@ class Application(tk.Tk):
         try:
             if not self.map:  # Creates the frames hubs and everything
                 self.map = map.model_copy(deep=True)
-                self.paths = get_path(
+                self.map.paths = get_path(
                     self.map.start_hub, self.map.end_hub.name, [], [])
 
                 self.clear_grid(row=1)
@@ -416,7 +415,6 @@ class Application(tk.Tk):
                 self.scroll_y = None
                 self.map_frame = None
                 self.map = None
-                self.paths = None
                 self.control_widget(forward=True, backward=False, play=True)
                 self.playing = False
 
