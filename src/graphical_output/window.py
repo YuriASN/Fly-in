@@ -108,31 +108,33 @@ class Application(tk.Tk):
     def play_pause(self, loop_call: bool = False) -> None:
         def stop_play() -> None:
             self.playing = False
-            self.play_button.configure(text="Play")
 
         if not self.map:
             raise ValueError(f"{C_RED}No map available to play!"
                              f"{C_CLEAR}\n\n{traceback.format_exc()}")
+        try:
+            """ Stops if isn't a loop call and it's playing (when click pause).
+            Or if it's a loop call and button was disable (no more turns).
+            Or it's a loop call but playing is false (Prev. or Next clicked)"""
+            if (
+                (loop_call is False and self.playing is True)
+                or
+                (loop_call is True and (
+                    self.play_button.cget("state") == "disabled"
+                    or self.playing is False))
+            ):
+                stop_play()
+                return
 
-        """ Stops if isn't a loop call and it's playing (when click pause).
-        Or if it's a loop call and button was disable (no more turns).
-        Or it's a loop call but playing is false (Prev. or Next clicked)"""
-        if (
-            (loop_call is False and self.playing is True)
-            or
-            (loop_call is True and (
-                self.play_button.cget("state") == "disabled"
-                or self.playing is False))
-        ):
-            stop_play()
-            return
+            if not self.playing and not loop_call:
+                self.playing = True
+                self.play_button.configure(text="Pause")
 
-        if not self.playing and not loop_call:
-            self.playing = True
-            self.play_button.configure(text="Pause")
+            self.move_forward(True)
+            self.after(self.speed, self.play_pause, True)
 
-        self.move_forward(True)
-        self.after(self.speed, self.play_pause, True)
+        except Exception as err:
+            raise Exception(f"While playing: {err}")
 
     def control_widget(self, forward: bool | None = None,
                        backward: bool | None = None,
@@ -153,7 +155,7 @@ class Application(tk.Tk):
             if activate:
                 self.play_button.configure(state="normal")
             else:
-                self.play_button.configure(state="disabled")
+                self.play_button.configure(state="disabled", text="Play")
 
         if all(each is None for each in [forward, backward, play]):
             self.control_frame = tk.LabelFrame(self, labelanchor="nw",
