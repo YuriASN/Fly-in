@@ -57,7 +57,7 @@ class DroneHandlers(ABC, BaseModel):
         if not self.drone_count:
             raise ValueError(f"No drone to pop on the '{type(self)}'.")
         try:
-            self.drone_count -=1
+            self.drone_count -= 1
             return self.drones_in.pop(index)
         except Exception as err:
             raise Exception(f"Removing drone from '{type(self)}':\n\t{err}")
@@ -156,31 +156,36 @@ class Map(BaseModel):
         """
         Move the map the amount of turns provided as an argument.
         """
-        if go_turn < 0:
-            raise ValueError(
-                f"Turn value '{go_turn}' is invalid.")
-        if not self.paths:
-            raise ValueError(
-                "Moving the map, no 'paths' provided."
-            )
-        from .movement import step_forward, step_backwards
-        if not hasattr(self, "_snapshots"):
-            self._snapshots = {self.turn: self.model_copy(deep=True)}
-        if go_turn == self.turn:
-            return
-        if go_turn in self._snapshots.keys():
-            self.turn = self._snapshots[go_turn].turn
-            self.start_hub = self._snapshots[go_turn].start_hub
-            self.end_hub = self._snapshots[go_turn].end_hub
-            self.hubs = self._snapshots[go_turn].hubs
-            self.connections = self._snapshots[go_turn].connections
-            return
-        if go_turn > self.turn:
-            while go_turn != self.turn:
-                self = step_forward(self)
-                self._snapshots.update({self.turn: self.model_copy(deep=True)})
-        else:
-            raise Exception(f"Turn {go_turn} should be on the snapshot!\nCurr turn {self.turn}")
+        try:
+            if go_turn < 0:
+                raise ValueError(
+                    f"Turn value '{go_turn}' is invalid.")
+            if not self.paths:
+                raise ValueError(
+                    "Moving the map, no 'paths' provided."
+                )
+            from .movement import step_forward
+            if not hasattr(self, "_snapshots"):
+                self._snapshots = {self.turn: self.model_copy(deep=True)}
+            if go_turn == self.turn:
+                return
+            if go_turn in self._snapshots.keys():
+                self.turn = self._snapshots[go_turn].turn
+                self.start_hub = self._snapshots[go_turn].start_hub
+                self.end_hub = self._snapshots[go_turn].end_hub
+                self.hubs = self._snapshots[go_turn].hubs
+                self.connections = self._snapshots[go_turn].connections
+                return
+            if go_turn > self.turn:
+                while go_turn != self.turn:
+                    self = step_forward(self)
+                    self._snapshots.update(
+                        {self.turn: self.model_copy(deep=True)})
+            else:
+                raise ValueError(f"Turn {go_turn} should be on the snapshot!")
+
+        except Exception as err:
+            raise Exception(f"Moving the map: {err}")
 
 
 def map_creator(map_file: Path) -> Map:

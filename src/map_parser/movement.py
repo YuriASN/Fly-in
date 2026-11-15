@@ -1,19 +1,10 @@
 from .map_checker import Map
 
-""" DELETE
-Run everything from end to start to free the hubs the drones are going into.
-from last hub:
-    If next hub, move drone to the hub or connection if hub is retricted.
-    (Always checking if where ever it's going (conn or hub) is free to receive)
-    if curr_hub is restricted, check if prev connection has drones to move to it.
-    how to cache a turn to be used at step_backwards
-"""
 
 def step_forward(map: Map) -> Map:
     """
     Do a turn on the drones movement
     """
-    print("forward, no cache")#
     try:
         for path in map.paths:
             conns = reversed(path.links)
@@ -36,12 +27,3 @@ def step_forward(map: Map) -> Map:
 
     except Exception as err:
         raise Exception(f"While stepping forward: {err}\n")
-
-
-def step_backwards(map: Map) -> Map:
-    """
-    Rollback the last drone movement
-    """
-    print("backward, no cache")#
-    map.turn -= 1
-    return map

@@ -1,7 +1,7 @@
 import tkinter as tk
 from typing import Tuple, List, TypedDict, Literal
-from map_parser import Level, Map, Connection, step_backwards, step_forward
-from pathfinder import get_path, Path
+from map_parser import Level, Map, Connection
+from pathfinder import get_path
 from colorama import Fore, Style
 from functools import partial
 import traceback
@@ -79,7 +79,7 @@ class Application(tk.Tk):
         self.map.move(self.map.turn + 1)
         if self.map.turn == 1:
             self.control_widget(backward=True)
-        if self.map.total_drones == len(self.map.end_hub.drones_in):
+        if self.map.total_drones == self.map.end_hub.drone_count:
             self.control_widget(forward=False, play=False)
 
         # Stop the play if Next is hit during it's execution
@@ -96,6 +96,7 @@ class Application(tk.Tk):
             raise ValueError(f"{C_RED}No movement done to undo!"
                              f"{C_CLEAR}\n\n{traceback.format_exc()}")
         self.map.move(self.map.turn - 1)
+        self.control_widget(play=True, forward=True)
         if self.map.turn == 0:
             self.control_widget(backward=False)
 
@@ -130,9 +131,8 @@ class Application(tk.Tk):
             self.playing = True
             self.play_button.configure(text="Pause")
 
-        if self.playing:
-            self.move_forward(True)
-            self.after(self.speed, self.play_pause, True)
+        self.move_forward(True)
+        self.after(self.speed, self.play_pause, True)
 
     def control_widget(self, forward: bool | None = None,
                        backward: bool | None = None,
