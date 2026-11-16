@@ -243,16 +243,18 @@ def map_creator(map_file: Path) -> Map:
     def hub_factory(value: str) -> Hub:
         try:
             zone: Literal["normal", "restricted", "priority", "blocked"]
+            zone_flag = False
             name, x, y = value.split(" ")[:3]
             if value.find("[") != -1:
                 zone, color, max_drones = "normal", "", 1
                 values = value[value.find("[") + 1:value.rfind("]")].split(" ")
                 for each in values:
                     if each.startswith("zone"):
-                        if zone:
+                        if zone_flag:
                             raise DuplicatedError(
                                 f"On hub '{name}' zone is duplicated!")
                         zone = each.split("=")[1]
+                        zone_flag = True
                     elif each.startswith("color"):
                         if color:
                             raise DuplicatedError(

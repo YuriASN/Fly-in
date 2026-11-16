@@ -106,8 +106,9 @@ class Application(tk.Tk):
         self._map_put(self.map)
 
     def _play_pause(self, loop_call: bool = False) -> None:
-        def stop_play() -> None:
+        def _stop_play() -> None:
             self.playing = False
+            self.play_button.config(text="Play")
 
         if not self.map:
             raise ValueError(f"{C_RED}No map available to play!"
@@ -123,7 +124,7 @@ class Application(tk.Tk):
                     self.play_button.cget("state") == "disabled"
                     or self.playing is False))
             ):
-                stop_play()
+                _stop_play()
                 return
 
             if not self.playing and not loop_call:
@@ -440,7 +441,7 @@ class Application(tk.Tk):
         def _home_widget(self) -> tk.Button:
             home_button = tk.Button(
                 self.menu_frame, text="Home", padx=6, pady=6,
-                font=(FONT, FONT_SZ), command=self.home_loader,
+                font=(FONT, FONT_SZ), command=self._home_loader,
                 state="disabled")
             home_button.grid(row=0, column=0)
 
