@@ -25,6 +25,7 @@ def _remove_double(paths: List[Path]) -> List[Path]:
             for i in range(len(path.links)):
                 # If next hub has being used, pop the connection
                 if path.links[i - removed].names[1] in passed_names:
+                    path.hub_names.remove(path.links[i - removed].names[0])
                     path.links.pop(i - removed)
                     removed += 1
                 # If not append the hub to the list of passed

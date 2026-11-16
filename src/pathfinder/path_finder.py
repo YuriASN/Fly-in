@@ -20,6 +20,19 @@ class Path(BaseModel):
         ..., description="Max amount of drones that the path can move at once")
     priority: int = Field(
         ..., description="Amount of priority hubs on this path")
+    hub_names: List[str] = Field(default=[],
+                                 description="Name of all Hubs on the path")
+
+    def __init__(self, links: List[Connection], turns:int,
+                 moving: int, priority: int) -> None:
+        super().__init__(
+            links=links,
+            turns=turns,
+            moving=moving,
+            priority=priority,
+        )
+        self.hub_names = [links[0].hubs[0].name]
+        self.hub_names += [link.hubs[1].name for link in links]
 
 
 def get_path(hub: Hub, end: str, all_paths: List[Path],
