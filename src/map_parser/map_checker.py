@@ -1,3 +1,4 @@
+from __future__ import annotations
 from pydantic import BaseModel, Field, model_validator, ValidationError
 from typing import List, Tuple, Optional, Dict, Literal
 from colorama import Style, Fore
@@ -22,6 +23,27 @@ class DuplicatedError(BaseException):
 class Coordinates(BaseModel):
     x: int = 0
     y: int = 0
+
+
+class MapSnapshot(BaseModel):
+    turn: int
+    start_hub: Hub
+    end_hub: Hub
+    hubs: List[Hub]
+    connections: List[Connection]
+
+    def __init__(self, turn: int, start_hub: Hub, end_hub: Hub,
+                 hubs: List[Hub], connections: List[Connection]) -> None:
+        try:
+            super().__init__(
+            turn=turn,
+            start_hub=start_hub,
+            end_hub=end_hub,
+            hubs=hubs,
+            connections=connections
+            )
+        except Exception as err:
+            raise Exception(f"Creating map snapshot: {err}")
 
 
 class Drone(BaseModel):
@@ -164,11 +186,21 @@ class Map(BaseModel):
                 raise ValueError(
                     "Moving the map, no 'paths' provided."
                 )
-            from .movement import step_forward
+
+            # If it's first call creates the snapshot of turn 0
             if not hasattr(self, "_snapshots"):
-                self._snapshots = {self.turn: self.model_copy(deep=True)}
+                self._snapshots = {self.turn: MapSnapshot(
+                    self.turn,
+                    self.start_hub.model_copy(deep=True),
+                    self.end_hub.model_copy(deep=True),
+                    [hub.model_copy(deep=True) for hub in self.hubs],
+                    [conn.model_copy(deep=True) for conn in self.connections]
+                )}
+
             if go_turn == self.turn:
                 return
+
+            # If turn exists on a snapshot, just use it.
             if go_turn in self._snapshots.keys():
                 self.turn = self._snapshots[go_turn].turn
                 self.start_hub = self._snapshots[go_turn].start_hub
@@ -176,11 +208,22 @@ class Map(BaseModel):
                 self.hubs = self._snapshots[go_turn].hubs
                 self.connections = self._snapshots[go_turn].connections
                 return
+
+            # Call step forward to move the drones to the turn
+            from .movement import step_forward
             if go_turn > self.turn:
                 while go_turn != self.turn:
                     self = step_forward(self)
                     self._snapshots.update(
-                        {self.turn: self.model_copy(deep=True)})
+                        {self.turn: MapSnapshot(
+                            self.turn,
+                            self.start_hub.model_copy(deep=True),
+                            self.end_hub.model_copy(deep=True),
+                            [hub.model_copy(deep=True)
+                             for hub in self.hubs],
+                            [conn.model_copy(deep=True)
+                             for conn in self.connections]
+                )})
             else:
                 raise ValueError(f"Turn {go_turn} should be on the snapshot!")
 
