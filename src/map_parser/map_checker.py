@@ -3,7 +3,8 @@ This module Creates the map along with all it's itens and handles it's
 movements.
 """
 from __future__ import annotations
-from pydantic import BaseModel, Field, model_validator, ValidationError
+from pydantic import (
+    BaseModel, Field, model_validator, ValidationError, TypeAdapter)
 from typing import List, Tuple, Optional, Dict, Literal
 from colorama import Style, Fore
 from collections import Counter
@@ -14,6 +15,7 @@ import traceback
 
 C_RED = Fore.RED
 C_CLEAR = Style.RESET_ALL
+Zones = Literal["normal", "restricted", "priority", "blocked"]
 
 
 class DuplicatedError(BaseException):
@@ -91,7 +93,7 @@ class DroneHandlers(ABC, BaseModel):
 class Hub(DroneHandlers):
     name: str = Field(
         ..., description="Name of the hub")
-    zone: Literal["normal", "restricted", "priority", "blocked"] = Field(
+    zone: Zones = Field(
         default="normal", description="The type of the zone")
     x: int = Field(
         ..., description="X coordinate of the hub")
@@ -242,18 +244,20 @@ class Map(BaseModel):
 def map_creator(map_file: Path) -> Map:
     def hub_factory(value: str) -> Hub:
         try:
-            zone: Literal["normal", "restricted", "priority", "blocked"]
+            _zone_adapter: TypeAdapter[Zones] = TypeAdapter(Zones)
+            zone = _zone_adapter.validate_python("normal")
             zone_flag = False
             name, x, y = value.split(" ")[:3]
             if value.find("[") != -1:
-                zone, color, max_drones = "normal", "", 1
+                color, max_drones = "", 1
                 values = value[value.find("[") + 1:value.rfind("]")].split(" ")
                 for each in values:
                     if each.startswith("zone"):
                         if zone_flag:
                             raise DuplicatedError(
                                 f"On hub '{name}' zone is duplicated!")
-                        zone = each.split("=")[1]
+                        raw_zone = each.split("=")[1]
+                        zone = _zone_adapter.validate_python(raw_zone)
                         zone_flag = True
                     elif each.startswith("color"):
                         if color:
@@ -269,8 +273,6 @@ def map_creator(map_file: Path) -> Map:
                         raise KeyError(
                             f"'{each.split('=')[0]}' isn't a valid "
                             "metadata for a hub!")
-                if not zone:
-                    zone = "normal"
             hub = Hub(name=name, zone=zone, x=int(x), y=int(y),
                       color=color, max_drones=max_drones)
 
