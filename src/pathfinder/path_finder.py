@@ -67,7 +67,8 @@ def get_path(hub: Hub, end: str, all_paths: List[Path],
                                      priority + priority_add, moving_new)
                 conns.pop()
 
-        return all_paths
+        from .path_organizer import order_paths
+        return order_paths(all_paths)
 
     except ValidationError as err:
         raise Exception(f"{C_RED}Getting path from map:\n"
@@ -75,5 +76,3 @@ def get_path(hub: Hub, end: str, all_paths: List[Path],
     except Exception as err:
         raise Exception(f"{C_RED}Getting path from map:\n"
                         f"\t{err}{C_CLEAR}\n\n{traceback.format_exc()}")
-
-    return all_paths

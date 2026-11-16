@@ -11,7 +11,7 @@ C_RED = Fore.RED
 C_CLEAR = Style.RESET_ALL
 
 
-def remove_double(paths: List[Path]) -> List[Path]:
+def _remove_double(paths: List[Path]) -> List[Path]:
     """
     Remove all the paths that goes through a hub that's already being used.
     (Start and end hub are not counted)
@@ -57,9 +57,9 @@ def order_paths(paths: List[Path]) -> List[Path]:
             for row in df["path"]
         ]
 
-        # sorted_list = remove_double(sorted_list) # Implement here or outside
+        sorted_list = _remove_double(sorted_list)
+        return sorted_list
+
     except Exception as err:
         raise Exception(f"{C_RED}Ordering paths: {err}{C_CLEAR}\n"
                         f"{traceback.format_exc()}") from err
-
-    return sorted_list

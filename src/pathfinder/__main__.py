@@ -1,7 +1,6 @@
 #! .venv/bin python3.10
 
 from .path_finder import get_path, Path
-from .path_organizer import order_paths, remove_double
 from ..map_parser import get_maps, Map
 from typing import List, TypedDict
 from colorama import Fore, Style
@@ -74,12 +73,6 @@ if __name__ == "__main__":
         for each in all_data:
             print(f"\n{Fore.GREEN}Map '{each['map'].name}':\n"
                   f"Normal:{Style.RESET_ALL}")
-            print_paths(each["all_paths"])
-            each["all_paths"] = order_paths(each["all_paths"])
-            print(f"\n{Fore.GREEN}Ordered:{Style.RESET_ALL}\n")
-            print_paths(each["all_paths"])
-            each["all_paths"] = remove_double(each["all_paths"])
-            print(f"\n{Fore.GREEN}Removed doubles:{Style.RESET_ALL}\n")
             print_paths(each["all_paths"])
             print("-" * 50)
 
