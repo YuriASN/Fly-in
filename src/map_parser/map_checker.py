@@ -1,3 +1,7 @@
+"""
+This module Creates the map along with all it's itens and handles it's
+movements.
+"""
 from __future__ import annotations
 from pydantic import BaseModel, Field, model_validator, ValidationError
 from typing import List, Tuple, Optional, Dict, Literal
@@ -6,7 +10,6 @@ from collections import Counter
 from pathlib import Path
 from abc import ABC
 import traceback
-#import pathfinder
 
 
 C_RED = Fore.RED
@@ -36,12 +39,12 @@ class MapSnapshot(BaseModel):
                  hubs: List[Hub], connections: List[Connection]) -> None:
         try:
             super().__init__(
-            turn=turn,
-            start_hub=start_hub,
-            end_hub=end_hub,
-            hubs=hubs,
-            connections=connections
-            )
+                turn=turn,
+                start_hub=start_hub,
+                end_hub=end_hub,
+                hubs=hubs,
+                connections=connections
+                )
         except Exception as err:
             raise Exception(f"Creating map snapshot: {err}")
 
@@ -89,7 +92,7 @@ class Hub(DroneHandlers):
     name: str = Field(
         ..., description="Name of the hub")
     zone: Literal["normal", "restricted", "priority", "blocked"] = Field(
-        ..., description="The type of the zone")
+        default="normal", description="The type of the zone")
     x: int = Field(
         ..., description="X coordinate of the hub")
     y: int = Field(
@@ -176,7 +179,12 @@ class Map(BaseModel):
 
     def move(self, go_turn: int) -> None:
         """
-        Move the map the amount of turns provided as an argument.
+        Move the map to the turn provided as an argument.
+        It first checks if there's a snapshot of that turn done, and only if
+        not it do the changes for the turn saving it on the snapshot.
+
+        Args:
+            go_turn: int = The turn the map has to be on it.
         """
         try:
             if go_turn < 0:
@@ -223,7 +231,7 @@ class Map(BaseModel):
                              for hub in self.hubs],
                             [conn.model_copy(deep=True)
                              for conn in self.connections]
-                )})
+                             )})
             else:
                 raise ValueError(f"Turn {go_turn} should be on the snapshot!")
 
@@ -234,9 +242,10 @@ class Map(BaseModel):
 def map_creator(map_file: Path) -> Map:
     def hub_factory(value: str) -> Hub:
         try:
+            zone: Literal["normal", "restricted", "priority", "blocked"]
             name, x, y = value.split(" ")[:3]
             if value.find("[") != -1:
-                zone, color, max_drones = "", "", 1
+                zone, color, max_drones = "normal", "", 1
                 values = value[value.find("[") + 1:value.rfind("]")].split(" ")
                 for each in values:
                     if each.startswith("zone"):
