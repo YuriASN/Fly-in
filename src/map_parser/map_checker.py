@@ -354,6 +354,7 @@ def map_creator(map_file: Path) -> Map:
         name = name[:name.rfind(".")].replace("_", " ").title()
         start_hub.drones_in = drones
         start_hub.drone_count = len(drones)
+        end_hub.max_drones = nb_drones
         map = Map(name=name, level=map_file.parent.name,
                   start_hub=start_hub, end_hub=end_hub,
                   hubs=hubs, connections=connections, total_drones=nb_drones)
