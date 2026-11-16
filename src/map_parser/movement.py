@@ -7,7 +7,7 @@ def step_forward(map: Map) -> Map:
     """
     try:
         turn = map.turn
-        print(f"turn {turn}:")
+        #Run the paths together. Run main path until a hub on another path shows up running that hub too. then run the other path until the same point, and get back running the main path until another one shows up. MAYBE use this implementation below on a secondary function and just do the loop here.
         for path in map.paths:
             conns = reversed(path.links)
             for conn in conns:
@@ -22,9 +22,9 @@ def step_forward(map: Map) -> Map:
                                                     i - pop_count)
                             # If drone can be moved
                             if popped:
-                                pop_count += 1
                                 next_hub.put_drone(popped, turn)
                                 next_hub.drones_coming -= 1
+                                pop_count += 1
                         else:
                             print("Hub can't fit the drone from the "
                                   "connection. This shouldn't happen.")
@@ -41,19 +41,21 @@ def step_forward(map: Map) -> Map:
                             popped = prev_hub.pop_drone(turn,
                                                         i - pop_count)
                             if popped:
-                                pop_count += 1
                                 conn.put_drone(popped, turn)
                                 next_hub.drones_coming += 1
+                                pop_count += 1
                         else:
                             break
 
                 # If hub is normal and prev_hub has drones, move to the next.
                 elif prev_hub.drone_count:
+                    pop_count = 0
                     for i in range(prev_hub.drone_count):
                         if (next_hub.max_drones > next_hub.drone_count):
-                            popped = prev_hub.pop_drone(turn, i)
+                            popped = prev_hub.pop_drone(turn, i - pop_count)
                             if popped:
                                 next_hub.put_drone(popped, turn)
+                                pop_count += 1
                         else:
                             break
 
