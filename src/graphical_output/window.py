@@ -18,7 +18,7 @@ class LevelData(TypedDict):
     maps: List[tk.Button]
 
 
-def get_curr_screen_size() -> Tuple[int, int]:
+def _get_curr_screen_size() -> Tuple[int, int]:
     """
     Workaround to get the size of the current screen in a multi-screen setup.
 
@@ -41,7 +41,7 @@ def get_curr_screen_size() -> Tuple[int, int]:
 class Application(tk.Tk):
     def __init__(self, levels: List[Level]) -> None:
         try:
-            self.screen_x, self.screen_y = get_curr_screen_size()
+            self.screen_x, self.screen_y = _get_curr_screen_size()
             tk.Tk.__init__(self, className="Fly-In")
             self.configure(
                 width=int(self.screen_x * 0.8),
@@ -60,35 +60,35 @@ class Application(tk.Tk):
         self.scroll_y: tk.Scrollbar | None = None
         self.playing: bool = False
         self.speed = 700
-        self.get_levels_grid(levels)
-        self.menu_widget()
-        self.control_widget()
-        self.home_loader()
+        self._get_levels_grid(levels)
+        self._menu_widget()
+        self._control_widget()
+        self._home_loader()
         self.grid()
 
-    def clear_grid(self, row: int | None = None) -> None:
+    def _clear_grid(self, row: int | None = None) -> None:
         grids = self.grid_slaves(row=row)
         for grid in grids:
             if grid.cget("text") != "Menu":
                 grid.grid_forget()
 
-    def move_forward(self, from_play: bool = False) -> None:
+    def _move_forward(self, from_play: bool = False) -> None:
         if not self.map:
             raise ValueError(f"{C_RED}No map or path available to move forward"
                              f"{C_CLEAR}\n\n{traceback.format_exc()}")
         self.map.move(self.map.turn + 1)
         if self.map.turn == 1:
-            self.control_widget(backward=True)
+            self._control_widget(backward=True)
         if self.map.total_drones == self.map.end_hub.drone_count:
-            self.control_widget(forward=False, play=False)
+            self._control_widget(forward=False, play=False)
 
         # Stop the play if Next is hit during it's execution
         if self.playing is True and from_play is False:
             self.playing = False
 
-        self.map_put(self.map)
+        self._map_put(self.map)
 
-    def move_backwards(self) -> None:
+    def _move_backwards(self) -> None:
         if not self.map:
             raise ValueError(f"{C_RED}No map or path available to move"
                              f"backwards{C_CLEAR}\n\n{traceback.format_exc()}")
@@ -96,16 +96,16 @@ class Application(tk.Tk):
             raise ValueError(f"{C_RED}No movement done to undo!"
                              f"{C_CLEAR}\n\n{traceback.format_exc()}")
         self.map.move(self.map.turn - 1)
-        self.control_widget(play=True, forward=True)
+        self._control_widget(play=True, forward=True)
         if self.map.turn == 0:
-            self.control_widget(backward=False)
+            self._control_widget(backward=False)
 
         # Stop the play if Prev. is hit during it's execution
         if self.playing:
             self.playing = False
-        self.map_put(self.map)
+        self._map_put(self.map)
 
-    def play_pause(self, loop_call: bool = False) -> None:
+    def _play_pause(self, loop_call: bool = False) -> None:
         def stop_play() -> None:
             self.playing = False
 
@@ -130,28 +130,28 @@ class Application(tk.Tk):
                 self.playing = True
                 self.play_button.configure(text="Pause")
 
-            self.move_forward(True)
-            self.after(self.speed, self.play_pause, True)
+            self._move_forward(True)
+            self.after(self.speed, self._play_pause, True)
 
         except Exception as err:
             raise Exception(f"While playing: {err}")
 
-    def control_widget(self, forward: bool | None = None,
-                       backward: bool | None = None,
-                       play: bool | None = None) -> None:
-        def forward_widget(activate: bool) -> None:
+    def _control_widget(self, forward: bool | None = None,
+                        backward: bool | None = None,
+                        play: bool | None = None) -> None:
+        def _forward_widget(activate: bool) -> None:
             if activate:
                 self.forward_button.configure(state="normal")
             else:
                 self.forward_button.configure(state="disabled")
 
-        def backward_widget(activate: bool) -> None:
+        def _backward_widget(activate: bool) -> None:
             if activate:
                 self.backward_button.configure(state="normal")
             else:
                 self.backward_button.configure(state="disabled")
 
-        def play_pause_widget(activate: bool) -> None:
+        def _play_pause_widget(activate: bool) -> None:
             if activate:
                 self.play_button.configure(state="normal")
             else:
@@ -164,42 +164,42 @@ class Application(tk.Tk):
                                                name="control")
             self.forward_button = tk.Button(
                 self.control_frame, text="Next", padx=6, pady=6,
-                font=(FONT, FONT_SZ), command=self.move_forward)
+                font=(FONT, FONT_SZ), command=self._move_forward)
             self.forward_button.grid(row=0, column=2)
 
             self.backward_button = tk.Button(
                 self.control_frame, text="Prev.", padx=6, pady=6,
                 font=(FONT, FONT_SZ), state="disabled",
-                command=self.move_backwards)
+                command=self._move_backwards)
             self.backward_button.grid(row=0, column=0)
 
             self.play_button = tk.Button(
                 self.control_frame, text="Play", padx=6, pady=6,
                 font=(FONT, FONT_SZ), width=5,
-                command=self.play_pause)
+                command=self._play_pause)
             self.play_button.grid(row=0, column=1)
 
         if isinstance(forward, bool):
-            forward_widget(forward)
+            _forward_widget(forward)
         if isinstance(backward, bool):
-            backward_widget(backward)
+            _backward_widget(backward)
         if isinstance(play, bool):
-            play_pause_widget(play)
+            _play_pause_widget(play)
 
-    def map_put(self, map: Map) -> None:
+    def _map_put(self, map: Map) -> None:
         CELL_W, CELL_H, MARGIN = 240, 120, 60
         HUB_RELATION = 1.7
         HUB_W, HUB_H = int(CELL_W // HUB_RELATION), int(CELL_H // HUB_RELATION)
 
-        def color_check(color: str) -> bool:
+        def _color_check(color: str) -> bool:
             try:
                 self.winfo_rgb(color)
                 return True
             except tk.TclError:
                 return False
 
-        def put_hub(canvas: tk.Canvas, color: str, letter: str,
-                    x: int, y: int, name: str, drones: int) -> None:
+        def _put_hub(canvas: tk.Canvas, color: str, letter: str,
+                     x: int, y: int, name: str, drones: int) -> None:
             """
             Places a hub on the canvas using x and y pixel coordinates.
             """
@@ -214,7 +214,7 @@ class Application(tk.Tk):
                 justify="center", offset="center", fill=letter,
                 font=(FONT, FONT_SZ), tags=[name, "text"])
 
-        def put_conn(canvas: tk.Canvas, conn: Connection) -> None:
+        def _put_conn(canvas: tk.Canvas, conn: Connection) -> None:
             """
             Places the conn inside the canvas using it's hubs to figure out
             the coordinates.
@@ -274,17 +274,17 @@ class Application(tk.Tk):
                                text=str(len(conn.drones_in)), justify=justf)
 
             # Bind tags of line and text to change both colors when hovering
-            def set_conn_color(_event: tk.Event, curr_tag: str,
-                               color: str) -> None:
+            def _set_conn_color(_event: tk.Event, curr_tag: str,
+                                color: str) -> None:
                 canvas.itemconfig(tag, fill=color)
 
             canvas.tag_bind(
                 tag, "<Enter>", partial(
-                    set_conn_color, curr_tag=tag, color="red")
+                    _set_conn_color, curr_tag=tag, color="red")
             )
             canvas.tag_bind(
                 tag, "<Leave>", partial(
-                    set_conn_color, curr_tag=tag, color="black")
+                    _set_conn_color, curr_tag=tag, color="black")
             )
 
         try:
@@ -293,7 +293,7 @@ class Application(tk.Tk):
                 self.map.paths = get_path(
                     self.map.start_hub, self.map.end_hub.name, [], [])
 
-                self.clear_grid(row=1)
+                self._clear_grid(row=1)
                 self.map_frame = tk.LabelFrame(
                     self, text=map.name, labelanchor="nw",
                     font=(FONT, FONT_SZ), name=map.name.lower())
@@ -311,14 +311,14 @@ class Application(tk.Tk):
                 self.map_canvas = map_canvas
 
                 for conn in map.connections:
-                    put_conn(map_canvas, conn)
+                    _put_conn(map_canvas, conn)
 
                 for hub in [*map.hubs, map.start_hub, map.end_hub]:
                     letter = "white" if hub.color == "black" else "black"
-                    color = hub.color if color_check(hub.color) else "white"
-                    put_hub(map_canvas, color, letter,
-                            hub.x * CELL_W + MARGIN, hub.y * CELL_H + MARGIN,
-                            hub.name, len(hub.drones_in))
+                    color = hub.color if _color_check(hub.color) else "white"
+                    _put_hub(map_canvas, color, letter,
+                             hub.x * CELL_W + MARGIN, hub.y * CELL_H + MARGIN,
+                             hub.name, len(hub.drones_in))
 
                 # Set scroll for big maps
                 self.scroll_y = tk.Scrollbar(
@@ -380,9 +380,9 @@ class Application(tk.Tk):
         except Exception as err:
             print(f"{C_RED}While putting map '{map.name}': {err}"
                   f"{C_CLEAR}\n\n{traceback.format_exc()}")
-            self.home_loader()
+            self._home_loader()
 
-    def get_levels_grid(self, levels: List[Level]) -> None:
+    def _get_levels_grid(self, levels: List[Level]) -> None:
         """
         Saves the whole level grid for future use
         """
@@ -395,7 +395,7 @@ class Application(tk.Tk):
                 for map in level.maps:
                     maps_buttoms.append(
                         tk.Button(new_lf, text=map.name, padx=6, pady=6,
-                                  command=partial(self.map_put, map)
+                                  command=partial(self._map_put, map)
                                   )
                                   )
                 self.levels.append({
@@ -406,7 +406,7 @@ class Application(tk.Tk):
             raise Exception(f"{C_RED}Getting Levels frame and maps buttons: "
                             f"{err}{C_CLEAR}\n\n{traceback.format_exc()}")
 
-    def home_loader(self) -> None:
+    def _home_loader(self) -> None:
         "Goes to the map choosing screen"
         try:
             if self.map_frame:
@@ -417,10 +417,10 @@ class Application(tk.Tk):
                 self.scroll_y = None
                 self.map_frame = None
                 self.map = None
-                self.control_widget(forward=True, backward=False, play=True)
+                self._control_widget(forward=True, backward=False, play=True)
                 self.playing = False
 
-            self.clear_grid()
+            self._clear_grid()
             for i, each in enumerate(self.levels):
                 for j, buttom in enumerate(each["maps"]):
                     buttom.grid(column=0, row=j)
@@ -430,14 +430,14 @@ class Application(tk.Tk):
             raise Exception(f"{C_RED}Loading map: {err}"
                             f"{C_CLEAR}\n\n{traceback.format_exc()}")
 
-    def menu_widget(self) -> None:
-        def quit_widget(self) -> None:
+    def _menu_widget(self) -> None:
+        def _quit_widget(self) -> None:
             quit_button = tk.Button(
                 self.menu_frame, text="Quit", padx=6, pady=6,
                 font=(FONT, FONT_SZ), command=self.quit)
             quit_button.grid(row=0, column=1)
 
-        def home_widget(self) -> tk.Button:
+        def _home_widget(self) -> tk.Button:
             home_button = tk.Button(
                 self.menu_frame, text="Home", padx=6, pady=6,
                 font=(FONT, FONT_SZ), command=self.home_loader,
@@ -450,8 +450,8 @@ class Application(tk.Tk):
             self.menu_frame = tk.LabelFrame(
                 self, labelanchor="nw", text="Menu", padx=6, pady=6,
                 font=(FONT, FONT_SZ), name="menu")
-            quit_widget(self)
-            self.home_button = home_widget(self)
+            _quit_widget(self)
+            self.home_button = _home_widget(self)
             self.menu_frame.grid(row=0, column=0, sticky="NW")
 
         except Exception as err:
