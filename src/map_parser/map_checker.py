@@ -66,17 +66,24 @@ class DroneHandlers(ABC, BaseModel):
     drone_count: int = Field(
         default=0, description="The amount of drones on it")
 
-    def put_drone(self, drone: Drone) -> None:
+    def put_drone(self, drone: Drone, turn: int) -> None:
         """
         Add a drone to the drones_in list and increase the drone count.
         """
         try:
+            # If drone is going to the connection, it has to wait 2 turns
+            if isinstance(self, Connection):
+                drone.move_turn = turn + 2
+            # If is going to hub, only wait one turn
+            else:
+                drone.move_turn = turn + 1
+
             self.drones_in.append(drone)
             self.drone_count += 1
         except Exception as err:
             raise Exception(f"Putting drone at '{type(self)}':\n\t{err}")
 
-    def pop_drone(self, index: int = 0) -> Drone:
+    def pop_drone(self, turn: int, index: int = 0) -> Drone | None:
         """
         Remove the drone at the 'index' from the drones_in list and
         decrease the drone count.
@@ -84,8 +91,10 @@ class DroneHandlers(ABC, BaseModel):
         if not self.drone_count:
             raise ValueError(f"No drone to pop on the '{type(self)}'.")
         try:
-            self.drone_count -= 1
-            return self.drones_in.pop(index)
+            if self.drones_in[index].move_turn <= turn:
+                self.drone_count -= 1
+                return self.drones_in.pop(index)
+            return None
         except Exception as err:
             raise Exception(f"Removing drone from '{type(self)}':\n\t{err}")
 
@@ -103,6 +112,9 @@ class Hub(DroneHandlers):
         ..., description="Color to representate the hub")
     links: List["Connection"] = Field(
         default=[], description="The connections this Hub has outgoing")
+    drones_coming: int = Field(default=0,
+                               description="How many drones are on a "
+                               "connection ready to come on the next turn.")
 
     @model_validator(mode="after")
     def validade_hub(self) -> "Hub":

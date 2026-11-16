@@ -13,28 +13,26 @@ C_CLEAR = Style.RESET_ALL
 
 def _remove_double(paths: List[Path]) -> List[Path]:
     """
-    Remove all the paths that goes through a hub that's already being used.
-    (Start and end hub are not counted)
+    Remove all the connections that are already used by another path.
+    This leaves only the connection that will lead to a different path.
+    That way when a turn is being done it doesn't have to search nothing
+    on the hubs that already changed.
     """
-    passed_names: List[str] = []
-    removed = 0
-    for i in range(len(paths)):
-        remove = False
-        for link in paths[i - removed].links:
-            if link.names[1] in passed_names:
-                #Check if can boost the amount of drones passing on this link and next ones ???
-                remove = True
-                break
-            if len(link.hubs[1].links):
-                # Adds the hub to the list if it isn't the last hub
-                passed_names.append(link.names[1])
-        if remove:
-            paths.pop(i - removed)
-            removed += 1
-            if i + removed == len(paths):
-                break
-
-    return paths
+    try:
+        passed_names: List[str] = []
+        for path in paths:
+            removed = 0
+            for i in range(len(path.links)):
+                # If next hub has being used, pop the connection
+                if path.links[i - removed].names[1] in passed_names:
+                    path.links.pop(i - removed)
+                    removed += 1
+                # If not append the hub to the list of passed
+                elif len(path.links[i - removed].hubs[1].links):
+                    passed_names.append(path.links[i - removed].names[1])
+        return paths
+    except Exception as err:
+        raise Exception(f"While removing double: {err}")
 
 
 def order_paths(paths: List[Path]) -> List[Path]:
