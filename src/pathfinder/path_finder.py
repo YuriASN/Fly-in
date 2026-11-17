@@ -35,7 +35,7 @@ class Path(BaseModel):
         self.hub_names += [link.hubs[1].name for link in links]
 
 
-def get_path(hub: Hub, end: str, all_paths: List[Path],
+def get_path_recursive(hub: Hub, end: str, all_paths: List[Path],
              conns: List[Connection], turns: int = 0,
              priority: int = 0, moving: int = -1) -> List[Path]:
     """
@@ -75,13 +75,12 @@ def get_path(hub: Hub, end: str, all_paths: List[Path],
                 conns.pop()
                 continue
             else:
-                all_paths = get_path(next_hub, end, all_paths,
-                                     conns, turns + turns_add,
-                                     priority + priority_add, moving_new)
+                all_paths = get_path_recursive(
+                    next_hub, end, all_paths, conns, turns + turns_add,
+                    priority + priority_add, moving_new)
                 conns.pop()
 
-        from .path_organizer import order_paths
-        return order_paths(all_paths)
+        return all_paths
 
     except ValidationError as err:
         raise Exception(f"{C_RED}Getting path from map:\n"
@@ -89,3 +88,14 @@ def get_path(hub: Hub, end: str, all_paths: List[Path],
     except Exception as err:
         raise Exception(f"{C_RED}Getting path from map:\n"
                         f"\t{err}{C_CLEAR}\n\n{traceback.format_exc()}")
+
+
+def get_path(hub: Hub, end: str, all_paths: List[Path],
+             conns: List[Connection]) -> List[Path]:
+    """
+    Return a list with all the paths available from hub to end.
+    It does a recursive search until a blocked hub or end hub are found.
+    """
+    all_paths = get_path_recursive(hub, end, all_paths, conns)
+    from .path_organizer import order_paths
+    return order_paths(all_paths)
