@@ -19,18 +19,15 @@ def _remove_double(paths: List[Path]) -> List[Path]:
     on the hubs that already changed.
     """
     try:
-        passed_names: List[str] = []
-        for path in paths:
+        passed_conns: List[str] = [
+            "_".join(sorted(link.names)) for link in paths[0].links]
+        for path in paths[1:]:
             removed = 0
             for i in range(len(path.links)):
-                # If next hub has being used, pop the connection
-                if path.links[i - removed].names[1] in passed_names:
-                    path.hub_names.remove(path.links[i - removed].names[0])
+                if "_".join(sorted(path.links[i - removed].names)) in passed_conns:
                     path.links.pop(i - removed)
                     removed += 1
-                # If not append the hub to the list of passed
-                elif len(path.links[i - removed].hubs[1].links):
-                    passed_names.append(path.links[i - removed].names[1])
+
         return paths
     except Exception as err:
         raise Exception(f"While removing double: {err}")
