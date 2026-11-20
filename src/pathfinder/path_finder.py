@@ -23,7 +23,7 @@ class Path(BaseModel):
     hub_names: List[str] = Field(default=[],
                                  description="Name of all Hubs on the path")
 
-    def __init__(self, links: List[Connection], turns:int,
+    def __init__(self, links: List[Connection], turns: int,
                  moving: int, priority: int) -> None:
         super().__init__(
             links=links,
@@ -36,8 +36,8 @@ class Path(BaseModel):
 
 
 def get_path_recursive(hub: Hub, end: str, all_paths: List[Path],
-             conns: List[Connection], turns: int = 0,
-             priority: int = 0, moving: int = -1) -> List[Path]:
+                       conns: List[Connection], turns: int = 0,
+                       priority: int = 0, moving: int = -1) -> List[Path]:
     """
     Return a list with all the paths available from hub to end.
     It does a recursive search until a blocked hub or end hub are found.

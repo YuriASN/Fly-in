@@ -58,17 +58,16 @@ def step_forward(map: Map) -> Map:
     """
     try:
         turn = map.turn
-        #Run the paths together. Run main path until a hub on another path shows up running that hub too. then run the other path until the same point, and get back running the main path until another one shows up. MAYBE use this implementation below on a secondary function and just do the loop here.
         main_path = map.paths[0]
         other_hubs = []
         for path in map.paths[1:]:
-            other_hubs += path.hub_names 
+            other_hubs += path.hub_names
         conns = reversed(main_path.links)
         for conn in conns:
             _run_conn_changes(conn, turn)
+            # If the 1st hub has another path, runs the other paths
             if conn.hubs[0].name in other_hubs:
                 for other in map.paths[1:]:
-                    #runs other path until conn.hubs[0].name
                     for other_conn in reversed(other.links):
                         _run_conn_changes(other_conn, turn)
 

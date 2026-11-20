@@ -24,7 +24,10 @@ def _remove_double(paths: List[Path]) -> List[Path]:
         for path in paths[1:]:
             removed = 0
             for i in range(len(path.links)):
-                if "_".join(sorted(path.links[i - removed].names)) in passed_conns:
+                if (
+                    "_".join(sorted(path.links[i - removed].names))
+                    in passed_conns
+                ):
                     path.links.pop(i - removed)
                     removed += 1
 
