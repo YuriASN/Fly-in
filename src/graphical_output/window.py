@@ -1,5 +1,5 @@
 import tkinter as tk
-from typing import Tuple, List, TypedDict, Literal
+from typing import Tuple, List, TypedDict, Literal, Callable
 from map_parser import Level, Map, Connection
 from pathfinder import get_path
 from colorama import Fore, Style
@@ -36,6 +36,51 @@ def _get_curr_screen_size() -> Tuple[int, int]:
     x_index = geometry.find("x")
     plus_index = geometry.find("+")
     return int(geometry[:x_index]), int(geometry[x_index + 1:plus_index])
+
+
+class CanvasTooltip:
+    """Shows a tooltip (pop_up) window next to the cursor
+    when hovering canvas tags."""
+
+    def __init__(self, canvas: tk.Canvas) -> None:
+        self.canvas = canvas
+        self.tip: tk.Toplevel | None = None
+        self.label: tk.Label | None = None
+
+    def bind(self, tag: str, text_fn: Callable[[], str]) -> None:
+        """text_fn is called on every hover, so the info is always current."""
+        self.canvas.tag_bind(tag, "<Enter>",
+                             lambda e: self._show(e, text_fn()), add="+")
+        self.canvas.tag_bind(tag, "<Motion>", self._move, add="+")
+        self.canvas.tag_bind(tag, "<Leave>", self._hide, add="+")
+
+    def _show(self, event: tk.Event, text: str) -> None:
+        """
+        Shows the tooltip info
+        """
+        self._hide(None)
+        self.tip = tk.Toplevel(self.canvas)
+        self.tip.wm_overrideredirect(True)
+        self.label = tk.Label(self.tip, text=text, justify="left",
+                              background="lightyellow", relief="solid",
+                              borderwidth=1, padx=4, pady=2)
+        self.label.pack()
+        self._move(event)
+
+    def _move(self, event: tk.Event) -> None:
+        """
+        Move the tooltip following the cursor
+        """
+        if self.tip:
+            self.tip.wm_geometry(f"+{event.x_root + 15}+{event.y_root + 15}")
+
+    def _hide(self, _event: tk.Event | None) -> None:
+        """
+        Removes the tooltip
+        """
+        if self.tip:
+            self.tip.destroy()
+            self.tip = None
 
 
 class Application(tk.Tk):
@@ -200,7 +245,8 @@ class Application(tk.Tk):
                 return False
 
         def _put_hub(canvas: tk.Canvas, color: str, letter: str,
-                     x: int, y: int, name: str, drones: int) -> None:
+                     x: int, y: int, name: str, drones: int,
+                     zone: str, max_drones: int) -> None:
             """
             Places a hub on the canvas using x and y pixel coordinates.
             """
@@ -214,6 +260,10 @@ class Application(tk.Tk):
                 text=name.capitalize() + "\nDrones: " + str(drones),
                 justify="center", offset="center", fill=letter,
                 font=(FONT, FONT_SZ), tags=[name, "text"])
+
+            # Binds hovering data
+            self.tooltip.bind(
+                name, lambda: f"Max drones: {max_drones}\nZone: {zone}")
 
         def _put_conn(canvas: tk.Canvas, conn: Connection) -> None:
             """
@@ -277,7 +327,7 @@ class Application(tk.Tk):
             # Bind tags of line and text to change both colors when hovering
             def _set_conn_color(_event: tk.Event, curr_tag: str,
                                 color: str) -> None:
-                canvas.itemconfig(tag, fill=color)
+                canvas.itemconfig(curr_tag, fill=color)
 
             canvas.tag_bind(
                 tag, "<Enter>", partial(
@@ -288,6 +338,10 @@ class Application(tk.Tk):
                     _set_conn_color, curr_tag=tag, color="black")
             )
 
+            # Binds hovering data
+            self.tooltip.bind(
+                tag, lambda: f"{conn.names[0].capitalize()} -> "
+                f"{conn.names[1].capitalize()}\nMax drones: {conn.max_drones}")
         try:
             if not self.map:  # Creates the frames hubs and everything
                 self.map = map.model_copy(deep=True)
@@ -310,6 +364,8 @@ class Application(tk.Tk):
                                        height=min(full_h, max_h),
                                        highlightthickness=0)
                 self.map_canvas = map_canvas
+                # Hoovering data tooltip
+                self.tooltip = CanvasTooltip(self.map_canvas)
 
                 for conn in map.connections:
                     _put_conn(map_canvas, conn)
@@ -319,7 +375,8 @@ class Application(tk.Tk):
                     color = hub.color if _color_check(hub.color) else "white"
                     _put_hub(map_canvas, color, letter,
                              hub.x * CELL_W + MARGIN, hub.y * CELL_H + MARGIN,
-                             hub.name, len(hub.drones_in))
+                             hub.name, len(hub.drones_in),
+                             hub.zone, hub.max_drones)
 
                 # Set scroll for big maps
                 self.scroll_y = tk.Scrollbar(
